@@ -1,0 +1,23 @@
+# Phạm vi dữ liệu (spec mục 3, 7). Giá trị `null`/[] = nhóm chưa chốt (spec mục 21.1).
+industry: steel
+
+# Danh sách mã công ty thép niêm yết — DO NHÓM CHỐT, không đặt trong code.
+companies: []
+
+# Giai đoạn gốc theo báo cáo giữa kỳ (spec mục 3.3).
+base_period:
+  start_year: 2021
+  end_year: 2023
+
+# Dữ liệu từ năm này trở đi CHỈ dùng làm nguồn đáp án tham chiếu,
+# không vào kho RAG, không vào input của cấu hình nào (spec mục 3.3, 7.2).
+reference_only_from_year: 2024
+
+paths:
+  raw: data/raw
+  processed: data/processed
+  eval: data/eval
+  hypotheses: hypotheses
+
+# Số chỉ tiêu đối chiếu ngẫu nhiên với BCTC gốc (spec mục 7.3) — DO NHÓM CHỌN.
+reconciliation_sample_n: null

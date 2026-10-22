@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+
+# Secrets: API key chỉ qua biến môi trường
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+
+# Editor/notebook
+.ipynb_checkpoints/
+.idea/
+.vscode/
+.coverage
+.mypy_cache/
+
+# Dữ liệu: không commit dữ liệu thô/bản quyền và dữ liệu sinh ra.
+# data/eval/ (ca, nhãn) được commit có chủ ý.
+data/raw/*
+data/processed/*
+!data/**/.gitkeep
+*.duckdb
+
+# Cache LLM, kết quả chạy
+cache/
+outputs/

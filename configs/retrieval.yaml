@@ -1,0 +1,4 @@
+# Truy xuất bằng chứng văn bản (spec mục 10.3). Bắt đầu BM25; dense/hybrid chỉ khi đo thấy cần.
+method: bm25
+top_k: null
+enforce_asof_filter: true  # lọc as-of trong code, không dựa vào prompt (spec mục 7.2)

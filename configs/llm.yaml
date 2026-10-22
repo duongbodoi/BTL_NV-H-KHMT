@@ -1,0 +1,11 @@
+# Thiết lập LLM dùng chung cho cấu hình A/B/C (spec mục 14, 16). Provider/model/tham số do nhóm chốt.
+provider: null
+model: null
+temperature: null
+max_tokens: null
+
+# API key CHỈ đọc từ biến môi trường có tên này, không bao giờ ghi trong file.
+# Tên biến là giá trị tạm, đổi theo provider nhóm chọn.
+api_key_env: ANTHROPIC_API_KEY
+
+cache_dir: cache/llm

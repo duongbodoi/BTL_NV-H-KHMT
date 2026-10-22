@@ -1,0 +1,17 @@
+# Đánh giá (spec mục 14, 15). Số ca/chia dev-test theo spec; danh sách ca do nhóm chọn.
+runs_per_case: 3
+target_cases: 18
+split:
+  dev: 5
+  test: 13
+
+configs: [A, B, C]
+ablations: [no_rag, no_verification, no_library]  # spec mục 14.2; tên tạm, nhóm xác nhận
+
+# Câu bắt buộc xuất hiện trong mọi bảng kết quả (spec mục 15).
+disclaimer: "Kết quả là khảo sát khả thi, không phải kết luận thống kê (cỡ mẫu nhỏ)."
+
+# Chỉ số thành công — mặc định ở spec mục 15.7; nhóm chốt/đổi TRƯỚC khi chạy test (mục 21.1).
+success_criteria: null
+
+freeze_file: configs/eval_freeze.json

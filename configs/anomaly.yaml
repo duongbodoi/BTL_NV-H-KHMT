@@ -1,0 +1,13 @@
+# Phát hiện bất thường (spec mục 8). Phase 0 chỉ dựng khung.
+# Tên/khóa ngưỡng và giá trị được thiết kế ở Phase 5; giá trị do nhóm chốt trên tập dev (spec mục 21.1).
+
+# Hai loại bất thường duy nhất (spec mục 3.2); mỗi loại xét HAI CHIỀU (tăng và giảm),
+# dù tên `inventory_increase` lấy theo ví dụ ở spec mục 9.1.
+anomaly_types:
+  - inventory_increase
+  - gross_margin_change
+
+two_sided: true            # spec mục 8.3
+compare_order: [yoy, qoq]  # YoY trước, QoQ sau (spec mục 8.3)
+
+thresholds: {}             # Phase 5
