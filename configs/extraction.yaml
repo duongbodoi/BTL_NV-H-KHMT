@@ -1,0 +1,68 @@
+# Trích số thô từ bảng OCR và BCTC có cấu trúc (spec Phase 2, mục 16, 23).
+# Đây là quy ước định dạng của BCTC Việt Nam, không phải ngưỡng nghiên cứu; không chứa tên công ty.
+
+numbers:
+  # Ô chỉ gồm một trong các ký tự này = "không có số dư / không phát sinh".
+  # KHÔNG ép về 0: value = null, status = dash_status (nhóm đã chốt NOT_APPLICABLE).
+  dash_tokens: ["-", "–", "—", "−", "‐", "‑"]
+  dash_status: NOT_APPLICABLE
+
+table:
+  # Vai trò cột nhận từ header: ô header riêng của cột (không trải nhiều cột) phải KHỚP TRỌN
+  # một từ khóa (không phân biệt hoa thường). Cột code/note/index giữ làm thuộc tính của dòng.
+  column_roles:
+    code: ["mã số"]
+    note: ["thuyết minh"]
+    index: ["stt"]
+  # Nhãn đơn vị trên header hoặc dòng "Đơn vị tính: ..." → mã đơn vị.
+  # Phase 2 chỉ gắn nhãn, KHÔNG quy đổi giá trị theo đơn vị.
+  units:
+    "vnd": VND
+    "triệu vnd": million_VND
+    "triệu đồng": million_VND
+    "nghìn vnd": thousand_VND
+    "nghìn đồng": thousand_VND
+    "ngàn đồng": thousand_VND
+    "tỷ vnd": billion_VND
+    "tỷ đồng": billion_VND
+    "vnđ": VND
+    "triệu vnđ": million_VND
+    "nghìn vnđ": thousand_VND
+    "tỷ vnđ": billion_VND
+  # Viết tắt bậc độ lớn: đứng trước "VND" mà tổ hợp không có trong `units` → không nhận
+  # (unit_unrecognized), tránh rơi về VND sai 10^3–10^9.
+  scale_abbreviations: ["tr.", "tr", "ng.", "ngh.", "k"]
+  # Header có token ngoại tệ → không dùng đơn vị VND của trang/header (unit_unrecognized).
+  foreign_currency_tokens: ["usd", "eur", "jpy", "cny", "krw", "sgd", "aud", "gbp", "thb", "nguyên tệ", "ngoại tệ"]
+  # Tiền tố của dòng khai báo đơn vị trong văn bản cùng trang, trước bảng.
+  unit_statement_prefixes: ["đơn vị tính", "đơn vị"]
+  # Header chứa cụm này → gắn cờ `restated` (số liệu kỳ so sánh đã điều chỉnh lại).
+  # Cụm được bỏ khỏi header trước khi đọc đơn vị (cụm dài khớp trước).
+  restated_keywords: ["đã điều chỉnh lại", "điều chỉnh lại", "đã trình bày lại", "trình bày lại"]
+  # Header cột có cụm kỳ tương đối mà không ghi kỳ cụ thể → không lấy kỳ ở ô góc trái
+  # (period_relative), vì "Năm trước" dưới tiêu đề "Cho năm 2024" là 2023.
+  # So khớp theo ranh giới từ. Không dùng từ trần như "trước" ("chi phí trả trước").
+  relative_period_keywords: ["năm trước", "năm nay", "năm ngoái", "kỳ trước", "kỳ này", "đầu năm", "cuối năm", "đầu kỳ", "cuối kỳ", "cùng kỳ", "năm tài chính trước", "năm tài chính này", "số liệu so sánh", "kỳ báo cáo"]
+  # Từ chỉ kỳ: dòng header giữa bảng mang kỳ chỉ được tin khi ô chỉ gồm kỳ, đơn vị và các từ
+  # này; còn chữ khác ("Đến năm 2030") → các dòng sau period_ambiguous.
+  period_words: ["cho", "năm", "quý", "tháng", "ngày", "tại", "kết thúc", "số dư", "kỳ"]
+  # Số lũy kế theo kỳ (YTD): không gán như số của quý/kỳ (period_cumulative). Không dùng "lũy kế"
+  # trần vì "Giá trị hao mòn lũy kế" là số dư tại một thời điểm.
+  cumulative_keywords: ["lũy kế từ đầu năm", "luỹ kế từ đầu năm", "lũy kế đến", "luỹ kế đến"]
+
+structured:
+  # CSV xuất từ nguồn công khai (vnstock hoặc nguồn khác) — nhóm chốt nguồn và tên cột.
+  layout: wide              # wide: mỗi cột ngoài id là một chỉ tiêu | long: một dòng một chỉ tiêu
+  number_format: plain      # plain: 1234567.89 | vn: 1.234.567,89
+  missing_tokens: ["", "nan", "none", "null", "na", "n/a"]
+  columns:
+    company: ticker
+    year: year
+    quarter: null           # null = dữ liệu năm
+    item: item              # chỉ dùng khi layout = long
+    value: value            # chỉ dùng khi layout = long
+    unit: null              # cột đơn vị (nếu có)
+  unit: null                # đơn vị chung khi không có cột đơn vị; null = chưa biết
+  # Cột bỏ qua ở layout wide (cột index, cột kỳ không dùng...). Cột có trong file mà không
+  # khai báo sẽ bị coi là chỉ tiêu — liệt kê ở đây để không gán sai.
+  ignore_columns: []

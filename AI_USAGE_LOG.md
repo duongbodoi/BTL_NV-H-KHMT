@@ -100,3 +100,70 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+---
+
+## 2026-10-23 — Phase 2 (Table/data extraction)
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:**
+- Audit-first: `extraction/` chỉ có `__init__.py` rỗng, nên toàn bộ code đều tạo mới. Khảo sát các dạng ô trong fixture HPG (chỉ dùng làm ví dụ):
+  - số VN, số âm trong ngoặc, `-`, `%`;
+  - header nhiều tầng có rowspan/colspan;
+  - cột `Mã số`/`Thuyết minh`;
+  - ô OCR dính nhiều số;
+  - header lặp giữa bảng;
+  - hai bảng bị OCR gộp làm một.
+- Báo kế hoạch trước khi code. Nhóm chốt dấu `-` → `NOT_APPLICABLE`, `value=None`.
+- `contracts.py`: `ValueStatus`. `configs/extraction.yaml` cùng `extraction/settings.py`: từ khóa, đơn vị, cấu hình CSV, có validate.
+- `extraction/numbers.py`: parse số VN/plain ra `Decimal`. Ô rỗng → `MISSING`; dấu gạch → `NOT_APPLICABLE`; còn lại → `UNRESOLVED` kèm lý do.
+- `extraction/tables.py`: bảng → `RawTableValue`, gồm nhãn dòng, mã số, thuyết minh, STT, header, kỳ, đơn vị, trạng thái, cờ, provenance.
+- `extraction/structured.py`: adapter CSV (wide/long), xử lý khóa trùng, provenance file/sha256/dòng/cột.
+- Test: 196 test case mới, gồm test tích hợp HPG và bất biến "không ô có chữ số nào bị mất", kiểm theo vị trí ô.
+
+**Lỗi/sai sót bắt được khi review:**
+- Tự review khi chạy trên HPG (trước review độc lập):
+  - Hai bảng bị OCR gộp làm các dòng của bảng sau nhận nhầm kỳ 31/12/2024. Đã thêm xử lý header giữa bảng.
+  - Dòng tiêu đề trải hết bảng xóa kỳ/đơn vị.
+  - Ô góc trái "Cho năm kết thúc … 2023" bị bỏ mất.
+  - Cột STT bị bỏ, không lưu vào đâu.
+  - "Giá trị hao mòn lũy kế" bị coi là số lũy kế theo kỳ.
+  - Hằng `REASON_MISSING_TOKEN` làm test quét secret báo động giả. Đã đổi tên hằng, không nới lỏng test.
+- Review độc lập vòng 1 (subagent): 2 CRITICAL, 4 HIGH, 7 MEDIUM, 7 LOW, đều có input tái hiện. Các lỗi chính:
+  - Tiêu đề chứa "Thuyết minh" làm mọi cột thành `note`, mất hết giá trị.
+  - Năm/ngày trong thân bảng bị coi là header, làm mất số và gán sai kỳ cho các dòng sau.
+  - Ô góc trái áp kỳ cho cột "Năm trước".
+  - Ngoại tệ, hoặc "Tr. VND", rơi về VND.
+  - "Quý 3" không kèm năm bị bỏ qua.
+  - CSV `UNRESOLVED` vẫn giữ `value`.
+  - Nhóm nghìn có số 0 đầu (`0.500` → 500).
+  - Test bất biến yếu (so chuỗi con).
+  Đã sửa toàn bộ CRITICAL/HIGH/MEDIUM và phần lớn LOW.
+- Review độc lập vòng 2: 1 CRITICAL, 3 HIGH (trong đó 1 hồi quy), 3 MEDIUM, 5 LOW. Các lỗi chính:
+  - Năm trong thân bảng khi nhãn nằm ở cột 1 vẫn bị nuốt.
+  - Dòng chữ "Đến năm 2030" đặt kỳ 2030 cho các dòng sau.
+  - Header năm trần đứng sau dòng tiêu đề bị coi là số liệu (hồi quy do bản sửa vòng 1).
+  - Cụm kỳ tương đối ngoài danh sách từ khóa.
+  - Dòng đánh số "A | B | C | 1 | 2".
+  Đã sửa và thêm test hồi quy. Trong lúc sửa còn tự bắt thêm hai lỗi trong chính config mới:
+  - từ khóa "trước" khớp nhầm "chi phí trả trước";
+  - "đến" trong `period_words` khiến "Đến năm 2030" bị coi là header sạch.
+  LOW còn mở: số La Mã ở cột 0 khi không có header; "Năm nay" dưới tiêu đề có ngày ra `period_relative` (bảo thủ). Cả hai đều có cờ.
+
+**Phần người cần tự xác minh:**
+- **Spot-check số (spec mục 25.5):** mở trang PDF 40 của BCTC hợp nhất HPG 2024 gốc, bảng "10. Hàng tồn kho", dòng "Nguyên vật liệu", cột 31/12/2024 "Giá gốc". Extractor ra `20.324.528.389.776` → `Decimal('20324528389776')` VND, và dự phòng `(17.265.822.207)` → `-17265822207`. Xác nhận với bản PDF, không chỉ với file OCR.
+- **Quy ước VN:** `1.751` được hiểu là 1751. `1,234` được hiểu là 1,234 và có cờ `ambiguous_separator`. Tài liệu dùng định dạng Anh phải chuyển đổi trước.
+- **Ý nghĩa của `NOT_APPLICABLE`** (dấu `-`). Nhóm cần chốt quy tắc ở Phase 3: khi cộng tổng có được coi là 0 không, và ghi ở đâu.
+- **Ý nghĩa các cờ:**
+  - Cờ bảng: `no_header`, `subheader_in_body`, `column_numbering_row`.
+  - Cờ kỳ: `period_missing`, `period_ambiguous`, `period_relative`, `period_cumulative`, `period_from_corner`, `period_incomplete`.
+  - Cờ đơn vị: `unit_missing`, `unit_conflict`, `unit_unrecognized`.
+  - Cờ khác: `after_subheader`, `label_from_rowspan`.
+  - Phase 3 phải lọc theo cờ, không chỉ theo `status`.
+- **Rà `configs/extraction.yaml`:** danh sách đơn vị, ngoại tệ, từ kỳ tương đối/lũy kế, `period_words`. Đây là quy ước BCTC VN do Claude soạn; nhóm nên bổ sung theo tài liệu thật của các công ty đã chọn.
+- **Khi chốt nguồn dữ liệu có cấu trúc** (vnstock hoặc nguồn khác): khai tên cột, layout, `number_format`, `unit`, `ignore_columns` trong `structured`.
+- **Hiểu vì sao trên HPG có 493 giá trị `period_missing`.** Đó là các bảng biến động "Số dư đầu năm/cuối năm", kỳ nằm ở nhãn dòng. Đây là việc của Phase 3.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

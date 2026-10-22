@@ -6,7 +6,18 @@ Chỉ định nghĩa những gì phase hiện tại cần; các contract khác t
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from enum import StrEnum
 from typing import Any
+
+
+class ValueStatus(StrEnum):
+    """Trạng thái một giá trị số (spec mục 18, 23). Chỉ `OK` mới có `value`; không ép về 0."""
+
+    OK = "OK"
+    MISSING = "MISSING"
+    UNKNOWN = "UNKNOWN"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    UNRESOLVED = "UNRESOLVED"
 
 
 @dataclass(frozen=True)
