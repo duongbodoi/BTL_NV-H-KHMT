@@ -51,3 +51,52 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+---
+
+## 2026-10-22 — Phase 1 (Document parsing)
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:**
+- Audit-first: `parsing/` rỗng, chưa có code Phase 1, nên toàn bộ đều tạo mới. Inspect fixture HPG để biết các dạng đầu vào (chỉ dùng làm ví dụ):
+  - marker `===== PAGE N =====`;
+  - bảng HTML trên một dòng có `rowspan`/`colspan`, entity, LaTeX;
+  - số trang in lệch hoặc không có;
+  - rác OCR từ con dấu/chữ ký;
+  - header lặp có lỗi OCR.
+- `src/steel_xai/contracts.py`: `Provenance` (spec mục 18).
+- `src/steel_xai/parsing/document.py`: `Document/Page/Block(text|table)/TableCell`, `parse_text`, `parse_file`, `to_dict/from_dict`.
+  - Trang chỉ lấy từ marker (số trang PDF).
+  - Block id deterministic `<doc_id>:pNNNN:bNNN`; giữ số dòng nguồn và `content_sha256`.
+  - Văn bản giữ nguyên, không sửa OCR, không bỏ dòng nào.
+  - Bảng chỉ tách cấu trúc ô; chưa parse số (Phase 2).
+  - Marker thiếu/trùng/giảm/méo → `ParseError`. Bảng hỏng → giữ nguyên văn và gắn `flags`.
+- Test: `tests/test_parsing_document.py` và fixture tổng hợp `tests/fixtures/synthetic_ocr_document.txt` (công ty giả định). Có thêm một test tích hợp trên fixture HPG, với kỳ vọng tính từ chính file; test này tự skip nếu thiếu file.
+- README: thêm ví dụ dùng parser.
+
+**Lỗi/sai sót bắt được khi review** (review độc lập bằng subagent, không có CRITICAL):
+- HIGH, đã sửa: marker gần đúng bị gộp im lặng vào trang trước, làm trích dẫn sai trang. Các dạng gặp lỗi: `\f===== PAGE 2 =====`, `===== PAGE 2 ===== (tiếp)`, `PAGE 2 / 80`. Cách sửa:
+  - chấp nhận `\f`/`\v` quanh marker;
+  - dòng giống marker mà sai định dạng → `ParseError`;
+  - chỉ nhận chữ số ASCII.
+- MEDIUM, đã sửa:
+  - `</table>` nằm trong comment HTML cắt bảng sai: giờ che comment/script/style trước khi dò bảng và gắn cờ `unexpected_html`;
+  - `<p>1.000</p><p>2.000</p>` trong ô bị dính thành `1.0002.000`: thẻ khối giờ chèn khoảng trắng, thẻ lạ thì gắn cờ.
+- LOW, đã sửa:
+  - `from_dict` nhận JSON có trang/doc_id/block_id không khớp: giờ báo `ParseError`;
+  - đổi `sha256` → `content_sha256`, ghi rõ đây là hash của văn bản đã chuẩn hóa;
+  - test tách dòng theo `\n` giống parser;
+  - siết test phủ nội dung: so từng ký tự không trắng của mỗi trang và kiểm block không chồng nhau.
+- Tự review: tự sửa một test viết sai (encode cp1258) và một test vô nghĩa (tautology) trên fixture HPG.
+
+**Phần người cần tự xác minh:**
+- Mở `tests/fixtures/HPG_financial_statements_2024_consolidated_extracted.txt`, chọn một block bất kỳ (ví dụ `...:p0040:b008`, tiêu đề "10. Hàng tồn kho") và đối chiếu với trang 40 của **file PDF gốc**: số in trên trang là 39, nhưng trích dẫn phải ghi trang PDF 40.
+- Quy ước nhập liệu: mỗi trang phải có marker `===== PAGE N =====` với N là số trang PDF. Nếu công cụ OCR của nhóm xuất định dạng khác thì phải chuyển đổi trước, vì parser sẽ báo lỗi chứ không đoán.
+- Hiểu các cờ `unclosed_table`, `nested_table`, `empty_table`, `invalid_span`, `text_outside_cell`, `unexpected_html`, `stray_table_tag` và vì sao block có cờ vẫn được giữ.
+- Fixture HPG là BCTC năm 2024, chỉ dùng để test parser. Theo spec mục 3.3 và 7.2, **không được** đưa file này vào kho RAG ở Phase 7.
+- Nhóm cần quyết định có commit fixture HPG hay không (bản quyền/dung lượng). Nếu không commit, test tích hợp sẽ tự skip.
+- Phase 1 chưa trích số nào từ BCTC. Spot-check số (spec mục 25.5) bắt đầu từ Phase 2; ở phase này nên spot-check trang/vị trí như mục đầu tiên.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

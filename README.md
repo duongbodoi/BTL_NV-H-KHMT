@@ -1,6 +1,16 @@
 # steel_xai — Giải thích bất thường BCTC ngành thép
 
-Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái: Phase 0 (foundation), chưa có feature.
+Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái: Phase 0 (foundation), Phase 1 (document parsing) chờ review/commit.
+
+## Parse văn bản OCR (Phase 1)
+
+```python
+from steel_xai.parsing import parse_file
+
+doc = parse_file("tài_liệu.txt", doc_id="abc_2023")  # mỗi trang mở đầu bằng "===== PAGE N ====="
+for block in doc.iter_blocks("table"):
+    print(block.block_id, block.page, block.provenance())  # page = số trang PDF, không phải số in
+```
 
 ## Cài đặt
 
@@ -28,8 +38,8 @@ python -m ruff format --check .
 configs/     anomaly.yaml, retrieval.yaml, llm.yaml, eval.yaml, dataset.yaml (giá trị null = nhóm chưa chốt)
 data/        raw/ (không commit), processed/, eval/
 hypotheses/  thư viện giả thuyết (nội dung do nhóm soạn)
-src/steel_xai/  config.py + các subpackage rỗng theo pipeline 4 bước
-tests/       test cho config loader và vệ sinh repo
+src/steel_xai/  config.py, contracts.py (Provenance), parsing/ (Phase 1), các subpackage còn rỗng
+tests/       test config loader, vệ sinh repo, parsing; fixtures/ (HPG chỉ là ví dụ)
 docs/
 AI_USAGE_LOG.md, DEVIATIONS_FROM_MIDTERM.md
 ```

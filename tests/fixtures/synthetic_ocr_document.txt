@@ -1,0 +1,40 @@
+===== PAGE 1 =====
+Công ty Cổ phần Thép Giả Định
+
+Báo cáo tài chính hợp nhất (tài liệu tổng hợp dùng cho test)
+
+===== PAGE 2 =====
+Công ty Cổ phần Thép Giả Định
+Thuyết minh báo cáo tài chính hợp nhất
+
+1. Đơn vị báo cáo
+Công ty sản xuất thép xây dựng và ống thép.
+
+Hàng tôn kho được phản ánh theo giá gốc.
+
+1
+
+11≤1 ≤≤7 1=11
+
+===== PAGE 3 =====
+Mâu B 09 - DN/HN
+
+Bảng 1 <table><tr><td rowspan="2"></td><td colspan="2">31/12/X1</td></tr><tr><th>Giá gốc VND</th><th>Dự phòng VND</th></tr><tr><td>Nguyên vật liệu</td><td>1.234.567</td><td>(12.000)</td></tr><tr><td>Thành phẩm \( (a) \) &amp; khác</td><td>-</td><td>-</td></tr></table> Ghi chú sau bảng.
+
+2
+
+===== PAGE 4 =====
+
+===== PAGE 5 =====
+10. Hàng tồn kho
+<table>
+<tr><td>Khoản mục</td><td>Số cuối kỳ</td></tr>
+<tr><td>Chi phí sản xuất<br>dở dang</td><td>98.765</td></tr>
+</table>
+Tổng cộng như trên.
+
+4
+
+===== PAGE 7 =====
+Bảng bị cắt
+<table><tr><td>Dòng dở</td><td>12</td>
