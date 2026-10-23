@@ -2,7 +2,14 @@
 industry: steel
 
 # Danh sách mã công ty thép niêm yết — DO NHÓM CHỐT, không đặt trong code.
-companies: []
+companies: [HPG, HSG, NKG]
+
+# Dữ liệu là BCTC NĂM (không phải quý), nguồn chính là OCR ViFinQA; không có nguồn có cấu trúc.
+# Công ty có năm tài chính lệch lịch (ví dụ HSG kết thúc 30/9): so sánh nhóm ngành ghép theo năm
+# tài chính và gắn cờ khi ngày kết thúc năm tài chính khác nhau (Phase 4/5).
+frequency: annual
+sources:
+  ocr_dir: data/raw/vifinqa   # data/raw/vifinqa/<mã>/<năm>/<tên tài liệu>/..._extracted.txt (không commit)
 
 # Giai đoạn gốc theo báo cáo giữa kỳ (spec mục 3.3).
 base_period:
@@ -20,4 +27,4 @@ paths:
   hypotheses: hypotheses
 
 # Số chỉ tiêu đối chiếu ngẫu nhiên với BCTC gốc (spec mục 7.3) — DO NHÓM CHỌN.
-reconciliation_sample_n: null
+reconciliation_sample_n: 20

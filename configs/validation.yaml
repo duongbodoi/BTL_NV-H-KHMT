@@ -1,0 +1,42 @@
+# Kiểm tra dữ liệu (spec Phase 4, mục 7.3). Quan hệ kế toán nằm ở đây, không nằm trong code.
+
+# "-" (NOT_APPLICABLE) khi cộng tổng được coi là 0 và fact đầu vào gắn cờ `nil_as_zero`.
+# Thiếu (MISSING/UNKNOWN), UNRESOLVED hoặc không có fact thì KHÔNG bao giờ thành 0: check ra
+# NOT_EVALUABLE kèm danh sách đầu vào thiếu.
+nil_as_zero: true
+
+# Dung sai tương đối cho các quan hệ tổng (0,1%).
+relative_tolerance: 0.001
+
+# Metric không được âm. Không gồm cogs/capex vì chuẩn hóa đã đổi chúng về độ lớn dương.
+non_negative: [net_revenue, inventory_total, inventory_gross]
+
+# Mỗi relation: target và terms (hệ số `coef`).
+#   identity:    target = Σ coef × term                (trong dung sai)
+#   upper_bound: Σ coef × term <= target × (1 + tol)   (thành phần không vượt tổng)
+relations:
+  - id: gross_profit_identity
+    kind: identity
+    target: gross_profit
+    terms: [{metric: net_revenue, coef: 1}, {metric: cogs, coef: -1}]
+  - id: inventory_net_identity
+    kind: identity
+    target: inventory_total
+    # inventory_provision ghi âm trên báo cáo → cộng vào giá gốc
+    terms: [{metric: inventory_gross, coef: 1}, {metric: inventory_provision, coef: 1}]
+  - id: inventory_components_bound
+    kind: upper_bound
+    target: inventory_gross
+    # Thành phần là giá gốc từ thuyết minh; chưa liệt kê hết (hàng hóa, công cụ dụng cụ...) nên chỉ
+    # kiểm không vượt tổng giá gốc.
+    terms:
+      - {metric: raw_materials, coef: 1}
+      - {metric: finished_goods, coef: 1}
+      - {metric: work_in_progress, coef: 1}
+
+# Đối chiếu ngẫu nhiên với BCTC gốc (mẫu giá trị tham chiếu do NGƯỜI cung cấp).
+# Cỡ mẫu `reconciliation_sample_n` nằm ở dataset.yaml.
+reconciliation:
+  sample_seed: 20260101   # bốc mẫu xác định, tái lập được
+  # Lệch tương đối dưới ngưỡng này (so với số trên PDF gốc) vẫn tính là khớp. 0 = phải bằng nhau.
+  match_tolerance: 0

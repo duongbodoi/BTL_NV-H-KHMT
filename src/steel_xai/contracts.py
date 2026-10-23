@@ -55,7 +55,8 @@ FACT_SOURCES = ("structured", "ocr", "derived")
 class FinancialFact:
     """Một giá trị tài chính đã chuẩn hóa: (công ty, kỳ, metric) → số VND hoặc trạng thái.
 
-    `period`: `FY2024` (số dòng cả năm), `2024Q3` (số dòng của quý, hoặc số dư cuối quý).
+    `period`: năm tài chính `FY2024` (dữ liệu là BCTC năm). `fiscal_period_end` là ngày kết thúc
+    năm tài chính (ISO) nếu đọc được, vì công ty có năm tài chính lệch lịch (kết thúc 30/9...).
     `value` là `Decimal`, chỉ có khi `status == OK`. `source = "derived"` là số do code tính từ các
     fact khác (`inputs` ghi khóa của chúng), không có provenance riêng.
     """
@@ -70,6 +71,7 @@ class FinancialFact:
     provenance: Provenance | None = None
     validation_flags: tuple[str, ...] = ()
     inputs: tuple[str, ...] = ()
+    fiscal_period_end: str | None = None
 
     def __post_init__(self) -> None:
         if self.source not in FACT_SOURCES:
@@ -93,6 +95,7 @@ class FinancialFact:
             "provenance": None if self.provenance is None else self.provenance.to_dict(),
             "validation_flags": list(self.validation_flags),
             "inputs": list(self.inputs),
+            "fiscal_period_end": self.fiscal_period_end,
         }
 
     @classmethod
@@ -110,4 +113,5 @@ class FinancialFact:
             else Provenance.from_dict(d["provenance"]),
             validation_flags=tuple(d.get("validation_flags", ())),
             inputs=tuple(d.get("inputs", ())),
+            fiscal_period_end=d.get("fiscal_period_end"),
         )

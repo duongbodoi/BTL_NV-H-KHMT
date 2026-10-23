@@ -1,123 +1,75 @@
-# Báo cáo Phase 3 — Financial metric normalization
+# Báo cáo Phase 3 — Financial metric normalization (bản cập nhật theo dữ liệu năm)
 
-- **Ngày:** 2026-10-23
+- **Ngày:** 2026-10-23 (cập nhật sau quyết định của nhóm về dữ liệu)
 - **Thực hiện:** Claude Code (Claude Sonnet 5.5), dưới sự kiểm tra của nhóm
 - **Spec:** `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md` (v2), mục 7.1, 16, 17, 18, 20 (Phase 3), 23
-- **Trạng thái:** phần việc của Claude đã xong, đã qua 1 vòng review độc lập và chạy lại regression. **Chưa COMPLETED** cho tới khi nhóm spot-check và commit (spec mục 25, 28.2). Phase 2 cũng chưa được nhóm đánh dấu COMPLETED; Phase 3 xây trên đầu ra của nó.
+- **Trạng thái:** bản đầu (khóa kỳ theo quý) đã được nhóm commit (`4d2b8fa`). Bản này **thay khóa kỳ sang năm tài chính** và thêm các quyết định mới; đã qua 2 vòng review độc lập. Chưa COMPLETED cho tới khi nhóm spot-check và commit (spec mục 25, 28.2).
 
----
+## Quyết định của nhóm đã áp dụng
 
-## Phase này để làm gì?
-
-Phase 2 cho ra giá trị số thô: mỗi ô có nhãn dòng, kỳ, đơn vị, cờ. Phase 3 biến chúng thành **fact có khóa (công ty, kỳ, metric)** với số tiền quy về VND, để Phase 4 (validation) và Phase 5 (anomaly) dùng được.
-
-| Phase sau | Dùng kết quả Phase 3 để |
+| Quyết định | Áp dụng |
 |---|---|
-| Phase 4 | kiểm tổng thành phần (`inventory_total` so với tổng thành phần), đối chiếu BCTC gốc qua `provenance`, xử lý `rejections` / `conflicts` |
-| Phase 5 | tính tăng trưởng, số ngày tồn kho, biên gộp từ fact `OK`; fact khác `OK` thành `MISSING` / `NOT_EVALUABLE` |
-| Phase 8 | check định lượng đọc fact thay vì đọc bảng thô |
-
-Nguyên tắc: **không biết thì để trống, không đoán** (spec mục 23). Dấu `-` giữ `NOT_APPLICABLE`, không thành 0. Nguồn lệch nhau thì `UNRESOLVED`, không tự chọn.
+| Dữ liệu là BCTC **năm**, nguồn chính OCR ViFinQA, không có nguồn có cấu trúc | Khóa kỳ `FY<năm>` kèm `fiscal_period_end`. Nhánh CSV giữ nguyên nhưng không dùng; không điền `structured_aliases`. Quý bị loại (`not_annual`). |
+| Công ty HPG, HSG, NKG; HSG kết thúc năm tài chính 30/9 | `configs/dataset.yaml`; `fiscal_period_end` đọc từ văn bản tài liệu; không giả định 31/12. |
+| Số bị điều chỉnh ở năm sau | Giá trị chính của năm N lấy từ báo cáo năm N; số so sánh trong báo cáo N+1 lưu riêng (`result.comparatives`); khác thì fact chính có cờ `restated_later`, **không** thành `UNRESOLVED`. Chỉ có số so sánh → dùng nó kèm cờ `comparative_only`. |
+| `-` khi cộng tổng coi là 0 | Thuộc Phase 4 (xem `PHASE_4.md`). Ở Phase 3 `-` vẫn là `NOT_APPLICABLE`, không có giá trị. |
 
 ## 1. Tóm tắt: đã làm được gì
 
-| Đã làm được | Để làm gì |
-|---|---|
-| `configs/normalization.yaml`: từ điển nhãn cho 9 metric (`inventory_total`, `raw_materials`, `finished_goods`, `work_in_progress`, `construction_in_progress`, `net_revenue`, `cogs`, `gross_profit`, `capex`), mã số TT200, bộ lọc cột Giá gốc/Dự phòng, bảng quy đổi đơn vị, danh sách cờ chặn. | Mọi từ điển nằm trong config, không nằm trong code (spec mục 16). |
-| `normalization/mapping.py`: khớp **trọn** nhãn dòng (bỏ số thứ tự đầu dòng, chú thích và công thức cuối dòng), kiểm mã số, cột, ngữ cảnh bảng, kỳ, đơn vị; quy đổi về VND bằng `Decimal`. | Gán đúng ô vào đúng metric; "Doanh thu thuần ra bên ngoài" của bảng bộ phận không bị nhận nhầm là doanh thu thuần. |
-| Khóa kỳ: `FY2023` (số dòng cả năm), `2023Q3` (số dòng của quý, hoặc số dư cuối quý). Số dư chỉ nhận ngày cuối quý theo lịch. Số dòng cần năm hoặc quý rõ ràng. | So sánh được giữa OCR và CSV; cột số dư đầu năm (`1/1/2024`) không bị lẫn thành kỳ khác. |
-| Mỗi giá trị khớp nhãn hoặc thành `Candidate`, hoặc vào `rejections` kèm lý do (`code_mismatch`, `column_mismatch`, `table_context_mismatch`, `date_not_quarter_end`, `flow_duration_unknown`, `ragged_rows`, `period_*`…). Không có đường thứ ba. Test bất biến kiểm điều này. | Không bỏ im lặng (spec mục 23). |
-| `normalization/resolve.py`: gộp candidate. Nguồn có cấu trúc ưu tiên hơn OCR. Hai nguồn OK lệch nhau, hai tài liệu OCR lệch nhau (số trình bày lại), hoặc một nguồn ghi `-` còn nguồn kia có số → `UNRESOLVED` kèm bản ghi `Conflict` giữ đủ các giá trị. Cấu trúc `UNRESOLVED` mà OCR có số → dùng OCR kèm cờ. | Quy tắc ưu tiên nguồn có test, mâu thuẫn không bị chọn im lặng (spec mục 7.1). |
-| Dấu: `capex` ghi âm trên báo cáo lưu chuyển tiền tệ → fact lưu độ lớn dương (cờ `sign_flipped`); số dương bất ngờ hoặc `cogs` âm → `UNRESOLVED`. | Không đảo dấu im lặng. |
-| `gross_margin = gross_profit / net_revenue` do code tính bằng `Decimal`, `source="derived"`, `inputs` ghi khóa đầu vào. Thiếu đầu vào → `MISSING`; đầu vào `UNRESOLVED` → `UNRESOLVED`; doanh thu bằng 0 → `UNRESOLVED`. | Biên gộp cho Phase 5, không dùng LLM (spec mục 6). |
-| `FinancialFact` trong `contracts.py` (spec mục 18), có `to_dict`/`from_dict`; bất biến `value is not None` ⇔ `status == OK`. | Contract dùng chung. |
+- **Từ điển 11 metric** trong `configs/normalization.yaml`: tồn kho thuần (mã 140), tồn kho giá gốc (141), dự phòng giảm giá (149), nguyên vật liệu, thành phẩm, dở dang, XDCB dở dang, doanh thu thuần, giá vốn, lợi nhuận gộp, capex; cộng `gross_margin` dẫn xuất. Nhãn dùng chung (140 và 141 cùng ghi "Hàng tồn kho") được tách bằng mã số.
+- **Khóa kỳ năm tài chính.** Số dư chỉ nhận ngày cuối tháng (cột `1/1/2024` bị loại, `date_not_month_end`). Số dòng cần năm hoặc ngày kèm từ "năm"; quý, 6 tháng, ngày trần đều bị loại có lý do.
+- **Ngữ cảnh tài liệu** (`normalization/context.py`): ngày kết thúc năm tài chính của báo cáo = ngày cuối tháng xuất hiện nhiều nhất và nhiều hơn rõ rệt ngày xếp sau (hòa → `None`, không đoán). Dùng để giải header tương đối "Năm nay / Năm trước / Số cuối năm / Số đầu năm" (HSG 2017) và điền `fiscal_period_end` cho header chỉ có năm. Đơn vị lấy từ văn bản ("trình bày bằng đồng Việt Nam") chỉ khi không có câu nào nói theo bậc nghìn/triệu/tỷ **và** bảng không ghi một đơn vị lạ hay mâu thuẫn.
+- **Gộp nguồn.** Cấu trúc > OCR (nhánh không dùng). Hai tài liệu cùng năm báo cáo lệch nhau, hai `fiscal_period_end` khác nhau cho cùng năm, hoặc `-` ở một nơi còn nơi khác có số → `UNRESOLVED` kèm bản ghi `Conflict`.
+- **Dấu.** Giá vốn lưu độ lớn dương (HSG ghi trong ngoặc; cờ `sign_normalized`). Capex đảo về dương (`sign_flipped`), dương bất ngờ → `UNRESOLVED`. Dự phòng giữ dấu âm như báo cáo.
+- **`gross_margin`** do code tính, mang `fiscal_period_end` của đầu vào và các cờ `comparative_only`/`restated_later`; đầu vào lệch ngày khóa sổ → `UNRESOLVED`.
+- **Sửa Phase 2** (phát hiện nhờ fixture NKG 2023): ô header hai tầng "Tại ngày 31 tháng 12 năm" (năm ở dòng dưới) làm cả bảng mất header; đã nhận dạng ô ngày thiếu năm là header.
 
-Kết quả trên fixture HPG (chỉ là ví dụ): 15 fact (13 từ OCR, 2 `gross_margin` dẫn xuất), không có conflict. Giá trị nguyên vật liệu tại 31/12/2024 là `20.324.528.389.776` VND (trang 40), khớp số đã dùng để spot-check Phase 2. Biên gộp FY2024 = 18.497.549.127.684 / 138.855.112.131.387 ≈ 0,1332.
+Kết quả trên 5 fixture (ví dụ, kỳ vọng nhóm sẽ tự spot-check):
 
-## 2. File tạo
-
-- `configs/normalization.yaml`
-- `src/steel_xai/normalization/settings.py`
-- `src/steel_xai/normalization/mapping.py`
-- `src/steel_xai/normalization/resolve.py`
-- `src/steel_xai/normalization/pipeline.py`
-- `tests/test_normalization.py`
-- `docs/phase_reports/PHASE_3.md`
-
-## 3. File sửa
-
-- `src/steel_xai/contracts.py`: thêm `FinancialFact`.
-- `src/steel_xai/config.py`: thêm `"normalization"` vào `CONFIG_NAMES`.
-- `src/steel_xai/normalization/__init__.py`: export API.
-- `README.md`, `AI_USAGE_LOG.md`
-
-## 4. Quyết định thiết kế
-
-- **Khớp nhãn trọn, không khớp chuỗi con**, cộng mã số khi dòng có mã. Metric có `codes` mà dòng OCR không có mã → loại (`code_missing`). Lý do: cùng nhãn "Hàng tồn kho" ở mã 140 (số thuần) và 141 (số gốc), và mã 10 vừa là doanh thu thuần vừa là "Biến động hàng tồn kho" trên báo cáo lưu chuyển tiền tệ.
-- **Thành phần tồn kho lấy cột Giá gốc**, không lấy sau dự phòng, và chỉ từ bảng có dòng "Thành phẩm" (tách khỏi bảng chi phí dở dang dài hạn cùng nhãn). `inventory_total` là số thuần trên bảng cân đối (mã 140).
-- **Số dư chỉ nhận ngày cuối quý theo lịch.** Cột `1/1/2024` bị loại (`date_not_quarter_end`) thay vì suy thành 31/12/2023, vì số đầu năm của báo cáo sau có thể đã trình bày lại.
-- **CSV chỉ có năm:** số dư gán `Q4`, số dòng gán `FY`.
-- **Số dòng có ngày trần** (ví dụ `30/6/2023`) bị loại; phải có từ "năm" mới là số cả năm. Chuỗi "31 tháng 12" được hiểu là ngày, không phải độ dài kỳ.
-- **`-` ở một nguồn còn nguồn khác có số = mâu thuẫn** (`not_applicable_vs_value`). Ô trống ở một nguồn thì không chặn nguồn kia (thiếu dữ liệu, không phải khẳng định).
-- **CSV với metric `flip_sign`:** lấy độ lớn và ghi `sign_not_checked`, vì quy ước dấu của nguồn do nhóm chốt sau. Metric chỉ có `expected_sign` (ví dụ `cogs`) vẫn bị kiểm dấu ở cả hai nguồn.
-- **Dung sai so nguồn mặc định 0** (phải bằng nhau tuyệt đối sau quy đổi VND); config bắt buộc thuộc `[0, 1)`.
-- **Config được kiểm chặt:** cờ chặn gõ sai tên, alias trùng, đơn vị đích khác 1, tháng quý lạ, tử/mẫu dẫn xuất khác `kind`, chuỗi rỗng trong bộ lọc cột đều báo `ConfigError`.
-- **`structured_aliases` để trống** vì nhóm chưa chốt nguồn CSV; test dùng alias tổng hợp.
-
-## 5. Tests
-
-71 test case mới (tổng 366). Nhóm chính: nhãn và config; fact từ bảng OCR (số dư, số dòng, mã, cột, ngữ cảnh bảng, đơn vị, dấu, trạng thái ô); CSV (quý, năm, đơn vị, trạng thái, công ty thiếu, khóa trùng); gộp nguồn (ưu tiên, lệch, dung sai, dự phòng OCR, `-` vs số, hai tài liệu lệch, đồng ý); `gross_margin` (chính xác `Decimal`, âm, thiếu, bằng 0, lan truyền `UNRESOLVED`); bất biến (mỗi giá trị khớp nhãn thành đúng một candidate hoặc rejection; deterministic và không phụ thuộc thứ tự; roundtrip JSON); hồi quy từ review; tích hợp HPG.
-
-## 6. Commands đã chạy
-
-```bash
-.venv\Scripts\python -m pytest -q
-.venv\Scripts\python -m ruff check .
-.venv\Scripts\python -m ruff format --check .
-```
-
-## 7. Kết quả
-
-| Passed | Skipped | Failed |
+| Fixture | Fact | Ghi chú |
 |---|---|---|
-| 366 | 0 | 0 |
+| HPG 2024 | 17 | nguyên vật liệu `20.324.528.389.776`, thành phẩm `12.155.686.194.056`, tồn kho thuần `46.091.222.189.472` (trang 40, 7), biên gộp FY2024 ≈ 0,1332 |
+| HPG 2022 | 14 | không có bảng thuyết minh tồn kho → không có fact thành phần |
+| HSG 2017 | 16 | `fiscal_period_end = 2017-09-30`; giá vốn `(21.730.791.206.018)` → `21.730.791.206.018` |
+| NKG 2019 | 18 | doanh thu thuần là ô dồn số → `UNRESOLVED`, biên gộp không đoán |
+| NKG 2023 | 20 | mã số ở cột đầu, header hai tầng |
 
-Ruff check: sạch. Ruff format: đã chạy `ruff format`, không còn thay đổi.
+## 2. File
 
-## 8. Known limitations
+- **Tạo:** `src/steel_xai/normalization/context.py`, `tests/test_review_round2.py`, `docs/DRAFT_SPEC_CHANGES.md`.
+- **Sửa:** `configs/normalization.yaml`, `configs/dataset.yaml` (HPG/HSG/NKG, `frequency: annual`, `reconciliation_sample_n: 20`), `configs/anomaly.yaml` (`compare_order: [yoy]`), `normalization/{settings,mapping,resolve,pipeline,__init__}.py`, `contracts.py` (`FinancialFact.fiscal_period_end`), `extraction/tables.py` (header ngày thiếu năm), `tests/test_normalization.py` (viết lại cho khóa năm), `tests/test_extraction_tables.py`, `README.md`, `AI_USAGE_LOG.md`.
 
-- **Quý theo lịch.** Công ty có năm tài chính lệch lịch (ví dụ kết thúc 30/9) sẽ có khóa kỳ sai quý. Nhóm xử lý khi chốt danh sách công ty. Chưa có cấu hình năm tài chính theo công ty.
-- **CSV chỉ có năm** luôn gán số dư vào `Q4` (cùng giả định lịch).
-- **Báo cáo năm sau trình bày lại số năm trước** sẽ thành `ocr_conflict` / `UNRESOLVED`, chưa có quy tắc ưu tiên bản mới hơn. Nhóm cần quyết định cách xử lý số trình bày lại.
-- **Số đầu năm bị loại.** Một báo cáo đơn lẻ chỉ cho số dư cuối kỳ của năm đó; cần báo cáo năm trước để có kỳ so sánh.
-- **Cột Dự phòng chưa là metric.** `inventory_total` là số thuần; thành phần là giá gốc; hai bên lệch nhau đúng bằng dự phòng và các khoản chưa liệt kê (hàng hóa, công cụ dụng cụ…). Phase 4 phải biết điều này khi kiểm tổng.
-- **Từ điển nhãn dựa trên mẫu TT200.** Công ty dùng nhãn khác (ví dụ "Doanh thu thuần" trần) cần bổ sung alias. Metric không có `codes` (các thành phần tồn kho) chỉ được chặn bởi ngữ cảnh bảng và cột, không có mã.
-- **`capex` chỉ lấy dòng mua sắm TSCĐ** trên báo cáo lưu chuyển tiền tệ; báo cáo quý lũy kế bị loại (`period_cumulative`).
-- **Giả định cờ Phase 2 đủ tin cậy.** Phase 3 kế thừa các giới hạn heuristic của Phase 2 (mục 8 của `PHASE_2.md`).
+## 3. Tests
 
-## 9. Chưa làm vì ngoài scope
+Theo fixture của nhóm đã thêm mỗi file một test ngắn: NKG 2019 (ô dồn số → `UNRESOLVED`), HSG 2017 (giá vốn âm, kỳ kết thúc 30/9), NKG 2023 (mã số ở cột đầu, tiêu đề hai tầng), HPG 2022 (thiếu thuyết minh tồn kho → không có thành phần; Phase 4 báo `MISSING`). Số test: `test_normalization.py` 94, `test_review_round2.py` 19 (nửa là Phase 3), 1 test mới ở `test_extraction_tables.py`. Toàn bộ repo: **448 passed, 0 skipped, 0 failed**; ruff check và format sạch.
 
-- Kiểm tổng thành phần, quan hệ kế toán, báo cáo đối chiếu (Phase 4).
-- Phát hiện bất thường, tăng trưởng, số ngày tồn kho (Phase 5).
-- Adapter vnstock; Parquet.
-- Quy tắc xử lý số trình bày lại; năm tài chính theo công ty.
+## 4. Review độc lập
 
-## 10. Hard-code công ty
+| Vòng | CRITICAL | HIGH | MEDIUM | LOW |
+|---|---|---|---|---|
+| 1 (bản quý) | 0 | 1 | 5 | 5 |
+| 2 (bản năm + Phase 4) | 0 | 2 | 6 | 8 |
 
-Không có. Code và config không chứa tên công ty, trang, dòng hay năm. Nhãn và mã số là quy ước BCTC Việt Nam (TT200) trong `configs/normalization.yaml`. Chỉ test tích hợp cuối `test_normalization.py` chứa kỳ vọng riêng của fixture HPG, với vai trò ví dụ.
+Vòng 2 (liên quan Phase 3) đã sửa: đơn vị lạ bị đơn vị văn bản ghi đè (sai 10^3–10^6 mà vẫn OK); ngày ký báo cáo thắng phiếu làm lệch cả năm tài chính; `restated_later` bỏ sót khi một bên là `-`; cờ nguồn không truyền sang số dẫn xuất; văn bản NFD không đọc được ngày. Các mục LOW còn mở: xem mục 5.
 
-## 11. AI_USAGE_LOG.md
+## 5. Known limitations
 
-Đã thêm mục "2026-10-23 — Phase 3". Review độc lập 1 vòng:
+- **Báo cáo hợp nhất và riêng lẻ chưa được phân biệt trong khóa fact.** Thư mục ViFinQA có cả `consolidated` và `separate`; hai loại cùng năm sẽ xung đột thành `UNRESOLVED`. Hiện chỉ nên nạp `consolidated`. Nhóm cần chốt (thêm chiều vào khóa hay lọc ở khâu nạp).
+- Header "(đã điều chỉnh)" của Phase 2 chỉ là cờ `restated`, chưa tham gia quy tắc nào.
+- **Ngày kết thúc năm tài chính suy từ văn bản** (heuristic phiếu đa số). Khi hòa hoặc không có, header tương đối bị loại (`report_period_unknown`). Cần nhóm spot-check `fiscal_period_end` của từng tài liệu thật.
+- Số đầu năm (`1/1/2024`) bị loại; số dư năm trước lấy từ cột "Số đầu năm"/so sánh nếu header ghi rõ.
+- Dung sai so nguồn mặc định 0; chưa có quy tắc cho số trình bày lại ngoài cờ `restated_later`.
+- Cột Dự phòng của thuyết minh chưa là metric; thành phần tồn kho chỉ là một phần của tổng giá gốc.
+- Kế thừa các giới hạn heuristic của Phase 2.
 
-| CRITICAL | HIGH | MEDIUM | LOW |
-|---|---|---|---|
-| 0 | 1 | 5 | 5 |
+## 6. Chưa làm vì ngoài scope
 
-HIGH và toàn bộ MEDIUM đã sửa, có test hồi quy. LOW: sửa 3 (test yếu, `cogs` thiếu kiểm dấu, config `quarter_end_months`/`derived`); 2 mục được ghi nhận ở mục 8 (giả định `Q4` cho CSV chỉ có năm; nhãn có chú thích cuối vẫn khớp, được chặn bằng mã số).
+Phát hiện bất thường (Phase 5); thư viện giả thuyết (Phase 6, nhóm soạn); adapter vnstock; phân biệt hợp nhất/riêng lẻ.
 
-Phần người cần xác minh: xem mục tương ứng trong `AI_USAGE_LOG.md`.
+## 7. Hard-code công ty
 
-## 12. Khác báo cáo giữa kỳ
+Không có trong `src`/`configs` logic. `configs/dataset.yaml` chứa danh sách công ty do nhóm chốt (đúng chỗ theo spec). Chỉ test dùng tên công ty của fixture làm ví dụ.
 
-Không có điểm khác mới. Không sửa `DEVIATIONS_FROM_MIDTERM.md`.
+## 8. Khác báo cáo giữa kỳ
+
+**Có** (dữ liệu năm thay quý, chỉ YoY, 3 công ty, mùa vụ không kiểm được). Chưa ghi vào `DEVIATIONS_FROM_MIDTERM.md`; đã soạn **bản nháp** ở `docs/DRAFT_SPEC_CHANGES.md` để nhóm duyệt.

@@ -75,6 +75,8 @@ _QUARTER_NOYEAR_RE = re.compile(r"(?<!\w)(?:quý|q)\s*(iv|iii|ii|i|[1-4])(?!\w)"
 _YEAR_RE = re.compile(r"(?<![\d/.,])((?:19|20)\d{2})(?![\d/.,])")
 _YEAR_ONLY_RE = re.compile(r"^(?:19|20)\d{2}$")
 _ROMAN = {"i": 1, "ii": 2, "iii": 3, "iv": 4}
+# Ngày thiếu năm ở cuối ô header hai tầng; năm nằm ở ô dưới.
+_DANGLING_DATE_RE = re.compile(r"\d{1,2}\s+tháng\s+\d{1,2}\s+năm\s*$")
 _EMPTY_PARENS_RE = re.compile(r"\(\s*\)")
 _INHERITED_TABLE_FLAGS = frozenset({"no_header", "block_flagged", "ragged_rows"})
 
@@ -487,6 +489,8 @@ def _is_header_cell(p: ParsedNumber, allow_bare: bool) -> bool:
     if p.reason == REASON_NO_DIGITS:
         return True
     t = norm_key(p.raw)
+    if _DANGLING_DATE_RE.search(t):
+        return True  # "Tại ngày 31 tháng 12 năm" + năm ở dòng header kế tiếp
     found, rest = _strip_periods(t)
     if not found or any(ch.isdigit() for ch in rest):
         return False

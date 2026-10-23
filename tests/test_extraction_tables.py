@@ -939,3 +939,20 @@ def test_n10_numbered_title_row_is_header():
         )
     )
     assert t.header_rows == 2 and FLAG_NO_HEADER not in t.flags
+
+
+def test_dangling_date_in_two_tier_header_is_a_header_not_data():
+    # "Tại ngày 31 tháng 12 năm" + "2023 VND" ở dòng dưới; cột đầu là Mã số (rowspan 2).
+    t = _one(
+        _table(
+            '<tr><td rowspan="2">Mã số</td><td rowspan="2">TÀI SẢN</td>'
+            '<td colspan="2">Tại ngày 31 tháng 12 năm</td></tr>',
+            "<tr><td>2023 VND</td><td>2022 VND</td></tr>",
+            _tr("140", "Hàng tồn kho", "5.000", "4.000"),
+        )
+    )
+    assert t.header_rows == 2 and FLAG_NO_HEADER not in t.flags
+    v = _by_raw(t, "5.000")
+    assert (v.row_code, v.row_label, v.unit) == ("140", "Hàng tồn kho", "VND")
+    assert v.column_header[-2:] == ("Tại ngày 31 tháng 12 năm", "2023 VND")
+    assert v.period is not None and v.period.year == 2023

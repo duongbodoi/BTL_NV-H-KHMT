@@ -1,15 +1,19 @@
 """Gộp candidate thành `FinancialFact` và tính metric dẫn xuất (spec mục 7.1, 23).
 
 Quy tắc nguồn: dữ liệu có cấu trúc > số trích từ OCR. Hai nguồn OK mà lệch nhau → UNRESOLVED
-(`source_conflict`), không tự chọn im lặng. Số lệch giữa hai lần xuất hiện trong cùng một nguồn
-(ví dụ báo cáo năm sau trình bày lại số năm trước) cũng là UNRESOLVED.
+(`source_conflict`), không tự chọn im lặng. Hai tài liệu cùng nguồn lệch nhau cũng là UNRESOLVED.
+
+Số đã được điều chỉnh ở năm sau: giá trị chính của năm N lấy từ báo cáo năm N. Số so sánh về năm N
+trong báo cáo năm N+1 được lưu riêng (`comparatives`); nếu khác thì fact chính gắn cờ
+`restated_later`, không đổi thành UNRESOLVED. Chỉ khi không có báo cáo năm N thì dùng số so sánh
+(cờ `comparative_only`).
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 
 from steel_xai.contracts import FinancialFact, Provenance, ValueStatus
@@ -23,9 +27,13 @@ FLAG_SOURCE_CONFLICT = "source_conflict"
 FLAG_NA_CONFLICT = "not_applicable_vs_value"
 FLAG_STRUCTURED_CONFLICT = "structured_conflict"
 FLAG_OCR_CONFLICT = "ocr_conflict"
+FLAG_FISCAL_END_MISMATCH = "fiscal_end_mismatch"
 FLAG_CONFIRMED_BY_OCR = "confirmed_by_ocr"
 FLAG_OCR_FALLBACK = "structured_unresolved_ocr_fallback"
 FLAG_HAS_UNRESOLVED = "has_unresolved_candidate"
+FLAG_RESTATED_LATER = "restated_later"
+FLAG_COMPARATIVE_ONLY = "comparative_only"
+FLAG_COMPARATIVE = "comparative"
 FLAG_DERIVED = "derived"
 FLAG_ZERO_DENOMINATOR = "zero_denominator"
 
@@ -54,18 +62,56 @@ class Conflict:
 
 def resolve_facts(
     candidates: Sequence[Candidate], settings: NormalizationSettings
-) -> tuple[list[FinancialFact], list[Conflict]]:
+) -> tuple[list[FinancialFact], list[FinancialFact], list[Conflict]]:
+    """(fact chính, fact so sánh lưu riêng, conflict)."""
     groups: dict[tuple[str, str, str], list[Candidate]] = defaultdict(list)
     for c in candidates:
         groups[c.key].append(c)
     facts: list[FinancialFact] = []
+    comparatives: list[FinancialFact] = []
     conflicts: list[Conflict] = []
     for key in sorted(groups):
-        fact, conflict = _resolve_group(key, groups[key], settings)
-        facts.append(fact)
+        primary = [c for c in groups[key] if not c.is_comparative]
+        comp = [c for c in groups[key] if c.is_comparative]
+        if not primary:
+            fact, conflict = _resolve_group(key, comp, settings, extra={FLAG_COMPARATIVE_ONLY})
+            facts.append(fact)
+            if conflict is not None:
+                conflicts.append(conflict)
+            continue
+        fact, conflict = _resolve_group(key, primary, settings)
         if conflict is not None:
             conflicts.append(conflict)
-    return facts, conflicts
+        if comp:
+            years = sorted({str(c.report_year) for c in comp})
+            c_fact, c_conflict = _resolve_group(
+                key,
+                comp,
+                settings,
+                extra={FLAG_COMPARATIVE} | {f"report_year:{y}" for y in years},
+            )
+            comparatives.append(c_fact)
+            if c_conflict is not None:
+                conflicts.append(c_conflict)
+            if _restated(fact, c_fact, settings):
+                fact = replace(
+                    fact,
+                    validation_flags=tuple(sorted({*fact.validation_flags, FLAG_RESTATED_LATER})),
+                )
+        facts.append(fact)
+    return facts, comparatives, conflicts
+
+
+def _restated(main: FinancialFact, comp: FinancialFact, s: NormalizationSettings) -> bool:
+    """Số so sánh ở báo cáo sau khác số chính: giá trị khác, hoặc một bên "-" còn bên kia có số."""
+    known = (ValueStatus.OK, ValueStatus.NOT_APPLICABLE)
+    if main.status not in known or comp.status not in known:
+        return False
+    if main.status is not comp.status:
+        return True
+    if main.value is None or comp.value is None:
+        return False
+    return not _close(main.value, comp.value, s.relative_tolerance)
 
 
 def derive_facts(
@@ -96,8 +142,20 @@ def _derive_ratio(
 ) -> FinancialFact:
     inputs = tuple(f"{company}|{period}|{m}" for m in (num_metric, den_metric))
     flags = [FLAG_DERIVED]
+    for f in (num, den):  # dấu vết nguồn của đầu vào đi theo số dẫn xuất
+        if f is not None:
+            flags += [
+                x for x in (FLAG_COMPARATIVE_ONLY, FLAG_RESTATED_LATER) if x in f.validation_flags
+            ]
+    flags = sorted(set(flags))
     status = ValueStatus.MISSING
     unusable = False
+    ends = {f.fiscal_period_end for f in (num, den) if f is not None and f.fiscal_period_end}
+    if len(ends) > 1:
+        flags.append(FLAG_FISCAL_END_MISMATCH)
+        status = ValueStatus.UNRESOLVED
+        unusable = True
+    end = next(iter(ends)) if len(ends) == 1 else None
     for metric, fact in ((num_metric, num), (den_metric, den)):
         if fact is None:
             flags.append(f"input_missing:{metric}")
@@ -107,40 +165,25 @@ def _derive_ratio(
             unusable = True
             if fact.status is ValueStatus.UNRESOLVED:
                 status = ValueStatus.UNRESOLVED
+
+    def make(value: Decimal | None, st: ValueStatus, extra: str | None = None) -> FinancialFact:
+        fl = tuple(flags + ([extra] if extra else []))
+        return FinancialFact(
+            company, period, name, value, UNIT_RATIO, st, "derived", None, fl, inputs, end
+        )
+
     if unusable or num is None or den is None or num.value is None or den.value is None:
-        return FinancialFact(
-            company, period, name, None, UNIT_RATIO, status, "derived", None, tuple(flags), inputs
-        )
+        return make(None, status)
     if den.value == 0:
-        flags.append(FLAG_ZERO_DENOMINATOR)
-        return FinancialFact(
-            company,
-            period,
-            name,
-            None,
-            UNIT_RATIO,
-            ValueStatus.UNRESOLVED,
-            "derived",
-            None,
-            tuple(flags),
-            inputs,
-        )
-    return FinancialFact(
-        company,
-        period,
-        name,
-        num.value / den.value,
-        UNIT_RATIO,
-        ValueStatus.OK,
-        "derived",
-        None,
-        tuple(flags),
-        inputs,
-    )
+        return make(None, ValueStatus.UNRESOLVED, FLAG_ZERO_DENOMINATOR)
+    return make(num.value / den.value, ValueStatus.OK)
 
 
 def _resolve_group(
-    key: tuple[str, str, str], cands: list[Candidate], s: NormalizationSettings
+    key: tuple[str, str, str],
+    cands: list[Candidate],
+    s: NormalizationSettings,
+    extra: set[str] | None = None,
 ) -> tuple[FinancialFact, Conflict | None]:
     company, period, metric = key
     cands = sorted(
@@ -154,11 +197,13 @@ def _resolve_group(
         ),
     )
     ok = [c for c in cands if c.status is ValueStatus.OK]
-    flags: set[str] = set()
+    flags: set[str] = set(extra or ())
     for c in cands:
         flags.update(c.flags)
     if ok and any(c.status is ValueStatus.UNRESOLVED for c in cands):
         flags.add(FLAG_HAS_UNRESOLVED)
+    ends = sorted({c.fiscal_end for c in (ok or cands) if c.fiscal_end})
+    end = ends[0] if len(ends) == 1 else None
 
     def unresolved(reason: str) -> tuple[FinancialFact, Conflict]:
         conflict = Conflict(
@@ -178,6 +223,8 @@ def _resolve_group(
             ok[0].source,
             ok[0].provenance,
             tuple(sorted(flags | {reason})),
+            (),
+            end,
         )
         return fact, conflict
 
@@ -193,9 +240,13 @@ def _resolve_group(
             first.source,
             first.provenance,
             tuple(sorted(flags)),
+            (),
+            end,
         )
         return fact, None
 
+    if len(ends) > 1:
+        return unresolved(FLAG_FISCAL_END_MISMATCH)
     if any(c.status is ValueStatus.NOT_APPLICABLE for c in cands):
         # một nguồn ghi "-" (không phát sinh) còn nguồn khác có số: mâu thuẫn, không tự chọn
         return unresolved(FLAG_NA_CONFLICT)
@@ -224,6 +275,8 @@ def _resolve_group(
         chosen.source,
         chosen.provenance,
         tuple(sorted(flags)),
+        (),
+        end,
     )
     return fact, None
 

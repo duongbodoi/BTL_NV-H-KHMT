@@ -204,3 +204,41 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+
+---
+
+## 2026-10-23 — Phase 3 (cập nhật theo dữ liệu năm) và Phase 4 (Validation)
+
+**Công cụ:** Claude Code (Claude Sonnet 5.5).
+
+**Bối cảnh:** nhóm đã commit Phase 3 bản đầu (`4d2b8fa`, khóa kỳ theo quý) và chốt: dữ liệu là BCTC năm OCR ViFinQA, công ty HPG/HSG/NKG (HSG kết thúc năm tài chính 30/9), `-` khi cộng tổng coi là 0 kèm cờ `nil_as_zero`, dung sai 0,1%, mẫu đối chiếu N = 20, số điều chỉnh ở năm sau lưu riêng và gắn `restated_later`. Việc 8 và 9 của danh sách (bộ ca, thư viện giả thuyết) do nhóm làm, Claude không làm.
+
+**Việc Claude đã làm:**
+- Khôi phục 4 fixture về working tree (đã `git restore`; hiện là file chưa theo dõi, nhóm `git add` khi commit).
+- Phase 3: đổi khóa kỳ sang `FY<năm>` + `fiscal_period_end`; `normalization/context.py` (ngày kết thúc năm tài chính và đơn vị đọc từ văn bản tài liệu); giải header tương đối "Năm nay / Số đầu năm"; tách nhãn dùng chung 140/141 bằng mã số; thêm metric `inventory_gross`, `inventory_provision`; giá vốn lưu độ lớn dương; số so sánh lưu riêng và cờ `restated_later` / `comparative_only`; `FinancialFact.fiscal_period_end`.
+- Phase 2 (sửa nhỏ): ô header hai tầng "Tại ngày 31 tháng 12 năm" được nhận là header (NKG 2023 trước đó mất toàn bộ header).
+- Phase 4: `configs/validation.yaml`; `validation/{settings,checks,reconciliation}.py` (quan hệ kế toán, `nil_as_zero`, năm tài chính, bốc mẫu đối chiếu, báo cáo đối chiếu).
+- Config: `dataset.yaml` (HPG/HSG/NKG, annual, N = 20), `anomaly.yaml` (`compare_order: [yoy]`).
+- Bản nháp thay đổi spec mục 3.3, 7.1, 8.3 và `DEVIATIONS_FROM_MIDTERM.md`: `docs/DRAFT_SPEC_CHANGES.md`. **Chưa sửa spec và DEVIATIONS.**
+- Test: 448 passed (đầu phase: 295 + 71 của bản Phase 3 đầu); fixture test cho NKG 2019, HSG 2017, NKG 2023, HPG 2022.
+
+**Lỗi/sai sót bắt được:**
+- Khi chạy 4 fixture mới: NKG 2023 không ra fact nào (header hai tầng bị coi là dữ liệu); HSG 2017 không ra fact nào (header "Năm nay/Năm trước" và bảng không ghi đơn vị). Là lỗ hổng của Phase 2-3 mà fixture HPG không lộ ra.
+- Chọn ngày kết thúc năm tài chính: thử "kết thúc ngày" cho NKG ra năm trước; đổi sang ngày cuối tháng xuất hiện nhiều nhất (đúng ở cả 5 fixture).
+- Review độc lập vòng 2 (subagent): 0 CRITICAL, 2 HIGH, 6 MEDIUM, 8 LOW, đều có input tái hiện:
+  - HIGH: đơn vị lạ ("Đơn vị: 1.000.000 đồng") bị đơn vị văn bản (VND) ghi đè, sai độ lớn nhưng vẫn `OK`; ngày ký báo cáo ngang số phiếu với ngày khóa sổ có thể lệch cả năm tài chính.
+  - MEDIUM: `restated_later` bỏ sót khi một bên là `-`; quan hệ kế toán vẫn PASS khi đầu vào khác ngày khóa sổ; năm nhuận báo thay đổi ngày khóa sổ; đối chiếu đọc sai dấu số trong ngoặc, `1,000` và phần trăm; dòng tham chiếu trùng làm tăng cỡ mẫu; config gõ sai tên metric không bị bắt.
+  - LOW đã sửa: chặn trên bỏ sót khi thiếu một thành phần; `non_negative` vô hiệu cho giá vốn/capex; fact `UNRESOLVED` có tham chiếu làm thấp tỷ lệ lệch; NFC; cờ nguồn không truyền sang số dẫn xuất; test tautology.
+  - LOW còn mở: khóa fact chưa phân biệt báo cáo hợp nhất/riêng lẻ; `fiscal_end_consistent` tính theo số fact; đẳng thức `0 = 0` cả ba vế `-`.
+
+**Phần người cần tự xác minh:**
+- **Spot-check số** trên file txt HPG 2024 (đã chốt hoãn PDF gốc): tồn kho thuần `46.091.222.189.472` (trang 7), doanh thu thuần `138.855.112.131.387` (trang 11), nguyên vật liệu `20.324.528.389.776` và thành phẩm `12.155.686.194.056` (trang 40). Thêm: HSG 2017, giá vốn `21.730.791.206.018` (báo cáo ghi trong ngoặc) và kỳ kết thúc `2017-09-30`; NKG 2023, tồn kho thuần `5.718.699.385.156`.
+- **Điền mẫu đối chiếu 20 chỉ tiêu** từ BCTC gốc: chạy `draw_sample` (seed trong `configs/validation.yaml`), `write_sample_template`, điền `reference_value` (theo VND, định dạng VN), rồi `reconciliation_report`. Tỷ lệ lệch là số liệu cho `docs/DATA_CARD.md`; hiện chưa có.
+- **Duyệt `docs/DRAFT_SPEC_CHANGES.md`**, đối chiếu với báo cáo giữa kỳ thật (giữa kỳ viết quý hay năm?), rồi chép vào spec và `DEVIATIONS_FROM_MIDTERM.md`.
+- **Hiểu các quyết định:** `-` coi là 0 chỉ khi cộng tổng (có cờ `nil_as_zero`), ở fact vẫn là `NOT_APPLICABLE`; dung sai 0,1% áp cho cả ba quan hệ; thành phần tồn kho chỉ kiểm chặn trên (chưa liệt kê hết); HSG so với HPG/NKG cùng `FY` nhưng khác thời điểm khóa sổ → cờ `peer_fiscal_end_differs`.
+- **Quyết định còn treo:** báo cáo hợp nhất và riêng lẻ (thư mục ViFinQA có cả hai): chỉ nạp `consolidated` hay thêm chiều vào khóa; quy tắc cho số trình bày lại ngoài cờ.
+- Kiểm tra `fiscal_period_end` của từng tài liệu thật (suy từ văn bản bằng heuristic).
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

@@ -1,6 +1,6 @@
 # steel_xai — Giải thích bất thường BCTC ngành thép
 
-Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái: Phase 0, 1, 2 đã commit; Phase 3 (chuẩn hóa metric) chờ review/commit của nhóm.
+Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái: Phase 0, 1, 2 đã commit; Phase 3 (chuẩn hóa metric) và Phase 4 (validation) chờ nhóm spot-check/commit.
 
 ## Parse văn bản OCR (Phase 1)
 
@@ -30,24 +30,40 @@ rows = load_structured_csv("bctc.csv")  # tên cột/layout/định dạng số 
 
 ## Chuẩn hóa metric (Phase 3)
 
-```python
-from steel_xai.normalization import normalize
+Dữ liệu là BCTC **năm** (OCR ViFinQA, không có nguồn có cấu trúc); kỳ là năm tài chính `FY2023` kèm `fiscal_period_end` (HSG kết thúc 30/9).
 
-result = normalize(
-    tables, structured=csv_values
-)  # tables: extract_document(...); csv_values: load_structured_csv(...)
+```python
+from steel_xai.normalization import build_context, normalize
+
+ctx = build_context(doc, settings)  # ngày kết thúc năm tài chính + đơn vị đọc từ văn bản tài liệu
+result = normalize(extract_document(doc, company="ABC"), contexts=[ctx])
 f = result.fact(
-    "ABC", "2023Q4", "inventory_total"
-)  # FinancialFact: value (Decimal, VND), status, source, provenance
-print(
-    result.rejections, result.conflicts
-)  # giá trị khớp nhãn nhưng không gán được / nguồn lệch nhau
+    "ABC", "FY2023", "inventory_total"
+)  # FinancialFact: value (Decimal, VND), status, provenance
+print(result.rejections, result.conflicts, result.comparatives)
 ```
 
-- Từ điển nhãn, mã số, cột, đơn vị, cờ chặn nằm ở `configs/normalization.yaml`; tên chỉ tiêu trong CSV (`structured_aliases`) nhóm điền khi chốt nguồn.
-- Khóa kỳ: `FY2023` (số dòng cả năm), `2023Q3` (số dòng của quý, hoặc số dư cuối quý).
-- Nguồn có cấu trúc ưu tiên hơn OCR; hai nguồn lệch nhau thì `UNRESOLVED`, không tự chọn. Thiếu/`-` không bao giờ thành 0.
+- Từ điển nhãn, mã số, cột, đơn vị, cờ chặn nằm ở `configs/normalization.yaml`.
+- Giá trị chính của năm N lấy từ báo cáo năm N; số so sánh trong báo cáo N+1 lưu riêng (`result.comparatives`), khác thì fact chính có cờ `restated_later`.
+- Hai nguồn/tài liệu cùng năm báo cáo lệch nhau thì `UNRESOLVED`, không tự chọn. Thiếu/`-` không bao giờ thành 0 ở bước này.
 - `gross_margin = gross_profit / net_revenue` do code tính (`source = "derived"`).
+
+## Validation (Phase 4)
+
+```python
+from steel_xai.validation import load_validation_settings, validate_facts, draw_sample
+
+v = validate_facts(result.facts, load_validation_settings())  # fact đã gắn cờ + danh sách check
+print(v.summary())  # PASS / FAIL / NOT_EVALUABLE theo từng quan hệ
+rows = draw_sample(
+    result.facts, n=20, seed=...
+)  # mẫu đối chiếu BCTC gốc; người điền reference_value
+```
+
+- Quan hệ kế toán (lợi nhuận gộp = doanh thu thuần - giá vốn; hàng tồn kho thuần = giá gốc + dự phòng; thành phần ≤ tổng) nằm ở `configs/validation.yaml`, dung sai 0,1%.
+- `-` khi cộng tổng coi là 0 và gắn cờ `nil_as_zero` (cấu hình được); thiếu/UNRESOLVED thì check ra `NOT_EVALUABLE`, không bao giờ thành 0.
+- Check FAIL chỉ gắn cờ vào fact (`validation_failed:<quan_hệ>`), không đổi giá trị hay trạng thái.
+- Bản nháp thay đổi spec/DEVIATIONS theo quyết định dữ liệu năm: `docs/DRAFT_SPEC_CHANGES.md` (chờ nhóm duyệt).
 
 ## Cài đặt
 

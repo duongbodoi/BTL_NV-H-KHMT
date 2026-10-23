@@ -8,6 +8,6 @@ anomaly_types:
   - gross_margin_change
 
 two_sided: true            # spec mục 8.3
-compare_order: [yoy, qoq]  # YoY trước, QoQ sau (spec mục 8.3)
+compare_order: [yoy]  # dữ liệu là BCTC năm: chỉ so YoY (QoQ không áp dụng); xem DRAFT_SPEC_CHANGES.md
 
 thresholds: {}             # Phase 5
