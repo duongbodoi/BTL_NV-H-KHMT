@@ -1,0 +1,119 @@
+# Chuẩn hóa metric cho phạm vi đề tài (spec Phase 3, mục 7.1, 16, 23).
+# Đây là từ điển nhãn BCTC Việt Nam (TT200) do Claude soạn làm điểm xuất phát; nhóm rà và bổ sung
+# theo tài liệu thật của các công ty đã chọn. Không chứa tên công ty.
+
+# Quy đổi mọi số tiền về VND. Đơn vị không có ở đây → fact UNRESOLVED (unit_unknown), không đoán.
+unit_scales:
+  VND: 1
+  thousand_VND: 1000
+  million_VND: 1000000
+  billion_VND: 1000000000
+
+# Cờ của Phase 2 làm số không gán được vào (công ty, kỳ, metric): candidate bị loại và ghi vào
+# `rejections` kèm lý do, không bị bỏ im lặng. Cờ khác được giữ lại trong validation_flags.
+# Cờ đơn vị (unit_*) không nằm ở đây: số vẫn thành fact nhưng UNRESOLVED (unit_unknown).
+blocking_flags:
+  - period_missing
+  - period_ambiguous
+  - period_invalid
+  - period_incomplete
+  - period_relative
+  - period_cumulative
+  - period_unresolved
+  - company_missing
+  - item_missing
+  - no_header
+  - no_label_column
+  - empty_row_label
+  - block_flagged
+  - ragged_rows
+  - column_numbering_row
+
+periods:
+  # Quý theo lịch (31/3, 30/6, 30/9, 31/12). Công ty có năm tài chính lệch lịch (ví dụ kết thúc 30/9)
+  # sẽ sai khác quý; đây là giới hạn đã biết, nhóm xử lý khi chốt danh sách công ty.
+  quarter_end_months: [3, 6, 9, 12]
+  # Header của số liệu dòng (flow) chỉ có năm: coi là số cả năm nếu text không chứa từ nào dưới đây.
+  non_annual_keywords: ["quý", "tháng", "kỳ", "lũy kế", "luỹ kế", "giữa niên độ"]
+  # Header flow có ngày cụ thể (ví dụ "30/6/2023") phải chứa một trong các từ này mới là số cả năm;
+  # ngày trần không cho biết kỳ dài bao lâu → flow_duration_unknown.
+  annual_keywords: ["năm"]
+
+resolution:
+  # Hai nguồn lệch nhau quá ngưỡng tương đối này → UNRESOLVED (source_conflict).
+  # 0 = phải bằng nhau tuyệt đối (sau quy đổi VND). Nhóm chỉnh nếu nguồn có cấu trúc làm tròn.
+  relative_tolerance: 0
+
+# Mỗi metric:
+#   kind: stock (số dư tại một ngày) | flow (số phát sinh trong kỳ)
+#   aliases: nhãn dòng OCR (khớp TRỌN sau chuẩn hóa: bỏ số thứ tự đầu dòng, chú thích/công thức cuối dòng)
+#   structured_aliases: tên chỉ tiêu trong CSV có cấu trúc, khớp trọn. Nhóm điền khi chốt nguồn.
+#   codes: mã số TT200 (nếu dòng có mã mà không nằm trong danh sách → loại, code_mismatch)
+#   column_includes / column_excludes: từ khóa trong header cột (bảng thuyết minh có cột Giá gốc/Dự phòng)
+#   requires_table_labels: bảng OCR phải chứa đủ các nhãn này (tách bảng thuyết minh hàng tồn kho
+#       khỏi bảng khác cùng nhãn)
+#   expected_sign / flip_sign: kiểm dấu. flip_sign dùng cho khoản chi (capex ghi âm trên báo cáo
+#       lưu chuyển tiền tệ). Với CSV có cấu trúc, metric flip_sign lấy độ lớn (cờ sign_not_checked)
+#       vì quy ước dấu của nguồn do nhóm chốt sau; metric chỉ có expected_sign vẫn bị kiểm dấu.
+metrics:
+  inventory_total:
+    kind: stock
+    aliases: ["hàng tồn kho"]
+    structured_aliases: []
+    codes: ["140"]
+  raw_materials:
+    kind: stock
+    aliases: ["nguyên liệu, vật liệu", "nguyên vật liệu", "nguyên liệu vật liệu"]
+    structured_aliases: []
+    column_includes: ["giá gốc"]
+    requires_table_labels: ["thành phẩm"]
+  finished_goods:
+    kind: stock
+    aliases: ["thành phẩm"]
+    structured_aliases: []
+    column_includes: ["giá gốc"]
+    requires_table_labels: ["thành phẩm"]
+  work_in_progress:
+    kind: stock
+    aliases: ["chi phí sản xuất kinh doanh dở dang", "chi phí sản xuất, kinh doanh dở dang"]
+    structured_aliases: []
+    column_includes: ["giá gốc"]
+    requires_table_labels: ["thành phẩm"]
+  construction_in_progress:
+    kind: stock
+    aliases: ["xây dựng cơ bản dở dang", "chi phí xây dựng cơ bản dở dang"]
+    structured_aliases: []
+    codes: ["242"]
+  net_revenue:
+    kind: flow
+    aliases:
+      - "doanh thu thuần về bán hàng và cung cấp dịch vụ"
+      - "doanh thu thuần bán hàng và cung cấp dịch vụ"
+    structured_aliases: []
+    codes: ["10"]
+  cogs:
+    kind: flow
+    aliases: ["giá vốn hàng bán và dịch vụ cung cấp", "giá vốn hàng bán"]
+    structured_aliases: []
+    codes: ["11"]
+    expected_sign: positive   # báo cáo ghi giá vốn dương; số âm bất ngờ → UNRESOLVED
+  gross_profit:
+    kind: flow
+    aliases: ["lợi nhuận gộp về bán hàng và cung cấp dịch vụ", "lợi nhuận gộp"]
+    structured_aliases: []
+    codes: ["20"]
+  capex:
+    kind: flow
+    aliases:
+      - "tiền chi mua sắm, xây dựng tài sản cố định và tài sản dài hạn khác"
+      - "tiền chi để mua sắm, xây dựng tscđ và các tài sản dài hạn khác"
+    structured_aliases: []
+    codes: ["21"]
+    expected_sign: negative   # báo cáo ghi chi ra là số âm
+    flip_sign: true           # fact lưu độ lớn dương; số dương bất ngờ → UNRESOLVED (unexpected_sign)
+
+# Metric dẫn xuất do code tính (không do LLM).
+derived:
+  gross_margin:
+    numerator: gross_profit
+    denominator: net_revenue

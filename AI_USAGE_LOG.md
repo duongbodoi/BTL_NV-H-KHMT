@@ -167,3 +167,40 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+
+---
+
+## 2026-10-23 — Phase 3 (Financial metric normalization)
+
+**Công cụ:** Claude Code (Claude Sonnet 5.5).
+
+**Việc Claude đã làm:**
+- Audit-first: `normalization/` chỉ có `__init__.py` rỗng; Phase 0-2 còn nguyên (295 test pass). Khảo sát nhãn, mã số, cột, kỳ của các dòng tồn kho, doanh thu, giá vốn, lợi nhuận gộp, XDCB dở dang, capex trên fixture HPG (chỉ dùng làm ví dụ).
+- `configs/normalization.yaml`: từ điển 9 metric, quy đổi đơn vị, cờ chặn, dung sai, metric dẫn xuất.
+- `normalization/{settings,mapping,resolve,pipeline}.py`: khớp nhãn trọn, kiểm mã/cột/ngữ cảnh bảng, khóa kỳ, quy đổi VND, ưu tiên nguồn, mâu thuẫn thành `UNRESOLVED`, `gross_margin` do code tính.
+- `contracts.py`: `FinancialFact`. `config.py`: thêm `normalization`.
+- Test: 71 test case mới trong `tests/test_normalization.py`, gồm bất biến "mỗi giá trị khớp nhãn thành đúng một candidate hoặc rejection" và test tích hợp HPG.
+
+**Lỗi/sai sót bắt được:**
+- Khi tự chạy trên HPG: bảng thuyết minh tồn kho không được nhận vì `requires_table_labels` dùng nhãn "nguyên liệu, vật liệu" trong khi bảng ghi "Nguyên vật liệu". Đã đổi sang điều kiện chỉ cần dòng "Thành phẩm".
+- Khi tự chạy test: header có ngày trần hoặc "Cho quý kết thúc…" bị nhận thành số cả năm; đã thêm `annual_keywords`.
+- Review độc lập (subagent): 0 CRITICAL, 1 HIGH, 5 MEDIUM, 5 LOW, đều có input tái hiện:
+  - HIGH: cờ `ragged_rows` không chặn, nên giá trị ở hàng thiếu ô có thể bị gán sang sai kỳ.
+  - MEDIUM: header "…ngày 31 tháng 12 năm 2023" bị loại vì từ khóa "tháng"; `-` ở một nguồn còn nguồn khác có số không thành mâu thuẫn; `relative_tolerance` không có cận trên; config thiếu kiểm (chuỗi rỗng trong bộ lọc cột, cờ chặn gõ sai, `VND` khác 1, tử/mẫu dẫn xuất khác loại); capex dương từ CSV luôn `UNRESOLVED` do kiểm dấu theo quy ước báo cáo.
+  - LOW: assertion luôn đúng trong test (`or True`), `cogs` thiếu kiểm dấu, `quarter_end_months` nhận tháng lạ. Hai mục còn mở được ghi trong báo cáo phase (CSV chỉ có năm luôn gán `Q4`; nhãn có chú thích cuối vẫn khớp).
+  - Đã sửa HIGH, MEDIUM và 3 LOW, thêm test hồi quy cho từng mục.
+
+**Phần người cần tự xác minh:**
+- **Spot-check số (spec mục 25.5):** mở PDF BCTC hợp nhất HPG 2024 gốc, đối chiếu trang 40 (Nguyên vật liệu, cột 31/12/2024 "Giá gốc" = `20.324.528.389.776`), trang 7 (Hàng tồn kho mã 140 = `46.091.222.189.472`) và trang 11 (doanh thu thuần mã 10 = `138.855.112.131.387`, lợi nhuận gộp mã 20 = `18.497.549.127.684`). Tự bấm máy: 18.497.549.127.684 / 138.855.112.131.387 ≈ 0,1332.
+- **Từ điển nhãn trong `configs/normalization.yaml` do Claude soạn** theo mẫu TT200: rà theo BCTC thật của các công ty đã chọn và bổ sung alias. Khi chốt nguồn CSV (vnstock hoặc nguồn khác), điền `structured_aliases` cho từng metric.
+- **Nhóm cần quyết định các quy tắc đề tài:**
+  - Số bị công ty trình bày lại ở báo cáo sau hiện thành `UNRESOLVED` (`ocr_conflict`); nhóm chọn cách xử lý.
+  - `relative_tolerance` hiện bằng 0 (phải bằng nhau tuyệt đối).
+  - Thành phần tồn kho lấy cột Giá gốc, còn `inventory_total` là số thuần sau dự phòng.
+  - Công ty có năm tài chính lệch lịch: khóa kỳ hiện theo quý lịch.
+- **Hiểu các cờ và lý do trong `rejections`:** `date_not_quarter_end`, `flow_duration_unknown`, `code_mismatch`, `column_mismatch`, `table_context_mismatch`, `ragged_rows`; và cờ trong fact: `source_conflict`, `ocr_conflict`, `not_applicable_vs_value`, `sign_flipped`, `sign_not_checked`, `unit_unknown`.
+- **Hiểu vì sao `-` không thành 0:** `NOT_APPLICABLE` không có giá trị; Phase 4/5 phải quyết định có coi là 0 khi cộng tổng hay không, và ghi rõ.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

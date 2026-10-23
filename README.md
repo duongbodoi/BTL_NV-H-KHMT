@@ -1,6 +1,6 @@
 # steel_xai — Giải thích bất thường BCTC ngành thép
 
-Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái: Phase 0, Phase 1 đã xong; Phase 2 (table/data extraction) chờ review/commit.
+Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái: Phase 0, 1, 2 đã commit; Phase 3 (chuẩn hóa metric) chờ review/commit của nhóm.
 
 ## Parse văn bản OCR (Phase 1)
 
@@ -26,7 +26,28 @@ rows = load_structured_csv("bctc.csv")  # tên cột/layout/định dạng số 
 
 - Số VN: `1.234.567` → 1234567, `(1.234)` → -1234, `12,5%` → 12.5 (`is_percent`). Giá trị là `Decimal`.
 - `-` → `value=None`, `NOT_APPLICABLE` (không bao giờ là 0); ô rỗng → `MISSING`; không parse được → `UNRESOLVED` kèm lý do trong `flags`.
-- Chưa map nhãn về metric chuẩn và chưa quy đổi đơn vị (Phase 3).
+- Chưa map nhãn về metric chuẩn và chưa quy đổi đơn vị: đó là việc của Phase 3.
+
+## Chuẩn hóa metric (Phase 3)
+
+```python
+from steel_xai.normalization import normalize
+
+result = normalize(
+    tables, structured=csv_values
+)  # tables: extract_document(...); csv_values: load_structured_csv(...)
+f = result.fact(
+    "ABC", "2023Q4", "inventory_total"
+)  # FinancialFact: value (Decimal, VND), status, source, provenance
+print(
+    result.rejections, result.conflicts
+)  # giá trị khớp nhãn nhưng không gán được / nguồn lệch nhau
+```
+
+- Từ điển nhãn, mã số, cột, đơn vị, cờ chặn nằm ở `configs/normalization.yaml`; tên chỉ tiêu trong CSV (`structured_aliases`) nhóm điền khi chốt nguồn.
+- Khóa kỳ: `FY2023` (số dòng cả năm), `2023Q3` (số dòng của quý, hoặc số dư cuối quý).
+- Nguồn có cấu trúc ưu tiên hơn OCR; hai nguồn lệch nhau thì `UNRESOLVED`, không tự chọn. Thiếu/`-` không bao giờ thành 0.
+- `gross_margin = gross_profit / net_revenue` do code tính (`source = "derived"`).
 
 ## Cài đặt
 

@@ -16,7 +16,7 @@ import yaml
 # Đúng khi cài editable (`pip install -e`) hoặc chạy từ source; ghi đè bằng STEEL_XAI_CONFIG_DIR.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR_ENV = "STEEL_XAI_CONFIG_DIR"
-CONFIG_NAMES = ("anomaly", "retrieval", "llm", "eval", "dataset", "extraction")
+CONFIG_NAMES = ("anomaly", "retrieval", "llm", "eval", "dataset", "extraction", "normalization")
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 

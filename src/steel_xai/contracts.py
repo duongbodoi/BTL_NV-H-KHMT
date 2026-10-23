@@ -6,6 +6,7 @@ Chỉ định nghĩa những gì phase hiện tại cần; các contract khác t
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
@@ -44,4 +45,69 @@ class Provenance:
             block_id=d.get("block_id"),
             chunk_id=d.get("chunk_id"),
             source_text=d.get("source_text"),
+        )
+
+
+FACT_SOURCES = ("structured", "ocr", "derived")
+
+
+@dataclass(frozen=True)
+class FinancialFact:
+    """Một giá trị tài chính đã chuẩn hóa: (công ty, kỳ, metric) → số VND hoặc trạng thái.
+
+    `period`: `FY2024` (số dòng cả năm), `2024Q3` (số dòng của quý, hoặc số dư cuối quý).
+    `value` là `Decimal`, chỉ có khi `status == OK`. `source = "derived"` là số do code tính từ các
+    fact khác (`inputs` ghi khóa của chúng), không có provenance riêng.
+    """
+
+    company: str
+    period: str
+    metric: str
+    value: Decimal | None
+    unit: str | None
+    status: ValueStatus
+    source: str
+    provenance: Provenance | None = None
+    validation_flags: tuple[str, ...] = ()
+    inputs: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.source not in FACT_SOURCES:
+            raise ValueError(f"source phải thuộc {FACT_SOURCES}, nhận {self.source!r}")
+        if (self.value is not None) != (self.status is ValueStatus.OK):
+            raise ValueError("value chỉ có khi status == OK")
+
+    @property
+    def key(self) -> tuple[str, str, str]:
+        return (self.company, self.period, self.metric)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "company": self.company,
+            "period": self.period,
+            "metric": self.metric,
+            "value": None if self.value is None else str(self.value),
+            "unit": self.unit,
+            "status": self.status.value,
+            "source": self.source,
+            "provenance": None if self.provenance is None else self.provenance.to_dict(),
+            "validation_flags": list(self.validation_flags),
+            "inputs": list(self.inputs),
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> FinancialFact:
+        return cls(
+            company=d["company"],
+            period=d["period"],
+            metric=d["metric"],
+            value=None if d.get("value") is None else Decimal(d["value"]),
+            unit=d.get("unit"),
+            status=ValueStatus(d["status"]),
+            source=d["source"],
+            provenance=None
+            if d.get("provenance") is None
+            else Provenance.from_dict(d["provenance"]),
+            validation_flags=tuple(d.get("validation_flags", ())),
+            inputs=tuple(d.get("inputs", ())),
         )
