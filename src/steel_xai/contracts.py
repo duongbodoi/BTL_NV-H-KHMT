@@ -115,3 +115,63 @@ class FinancialFact:
             inputs=tuple(d.get("inputs", ())),
             fiscal_period_end=d.get("fiscal_period_end"),
         )
+
+
+@dataclass(frozen=True)
+class Anomaly:
+    """Một bất thường do engine phát hiện (spec mục 8, 18). Không gán nhãn tốt/xấu.
+
+    `indicators`: giá trị các chỉ báo của loại này (chuỗi Decimal, `None` = không tính được).
+    `thresholds_hit`: các luật bị vượt, mỗi luật {indicator, direction, value, threshold}.
+    `baseline_used`: các cơ sở so sánh thực sự dùng: yoy, peer, history_z, history_mad.
+    `severity`: lớn nhất của |giá trị| / |ngưỡng| trong các luật bị vượt (>= 1).
+    `asof_date`: ngày công bố BCTC của kỳ bất thường (ISO) nếu nhóm đã khai, ngược lại `None`.
+    """
+
+    company: str
+    period: str
+    type: str
+    direction: str
+    indicators: dict[str, str | None]
+    thresholds_hit: tuple[dict[str, str], ...]
+    baseline_used: tuple[str, ...]
+    severity: Decimal
+    flags: tuple[str, ...] = ()
+    asof_date: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.direction not in ("up", "down"):
+            raise ValueError(f"direction phải là up/down, nhận {self.direction!r}")
+
+    @property
+    def anomaly_id(self) -> str:
+        return f"{self.company}|{self.period}|{self.type}|{self.direction}"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "company": self.company,
+            "period": self.period,
+            "type": self.type,
+            "direction": self.direction,
+            "indicators": dict(self.indicators),
+            "thresholds_hit": [dict(h) for h in self.thresholds_hit],
+            "baseline_used": list(self.baseline_used),
+            "severity": str(self.severity),
+            "flags": list(self.flags),
+            "asof_date": self.asof_date,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> Anomaly:
+        return cls(
+            company=d["company"],
+            period=d["period"],
+            type=d["type"],
+            direction=d["direction"],
+            indicators=dict(d["indicators"]),
+            thresholds_hit=tuple(dict(h) for h in d["thresholds_hit"]),
+            baseline_used=tuple(d["baseline_used"]),
+            severity=Decimal(d["severity"]),
+            flags=tuple(d.get("flags", ())),
+            asof_date=d.get("asof_date"),
+        )

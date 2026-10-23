@@ -34,9 +34,10 @@ blocking_flags:
 periods:
   # Header của số liệu dòng (flow) chỉ có năm: coi là số cả năm nếu text không chứa từ nào dưới đây.
   non_annual_keywords: ["quý", "tháng", "kỳ", "lũy kế", "luỹ kế", "giữa niên độ"]
-  # Header flow có ngày cụ thể (ví dụ "30/6/2023") phải chứa một trong các từ này mới là số cả năm;
-  # ngày trần không cho biết kỳ dài bao lâu → flow_duration_unknown.
-  annual_keywords: ["năm"]
+  # Header flow có ngày cụ thể (ví dụ "30/6/2023") phải chứa một trong các CỤM này mới là số cả
+  # năm; ngày trần, hay chữ "năm" chỉ nằm trong tiêu đề bảng ("... năm 2022 (soát xét)"), không
+  # cho biết kỳ dài bao lâu → flow_duration_unknown.
+  annual_keywords: ["năm kết thúc", "năm tài chính", "cho năm"]
   # Header tương đối ("Năm nay", "Số đầu năm") được quy về năm của báo cáo (đọc từ chính văn bản
   # tài liệu: "kết thúc ngày D tháng M năm Y"). Không đọc được năm của báo cáo → loại.
   current_period_keywords: ["năm nay", "số cuối năm", "cuối năm", "cuối kỳ", "kỳ này", "năm tài chính này"]

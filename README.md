@@ -1,6 +1,6 @@
 # steel_xai — Giải thích bất thường BCTC ngành thép
 
-Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái: Phase 0, 1, 2 đã commit; Phase 3 (chuẩn hóa metric) và Phase 4 (validation) chờ nhóm spot-check/commit.
+Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái: Phase 0, 1, 2 đã commit; Phase 3 (chuẩn hóa), Phase 4 (validation) và Phase 5 (anomaly engine) chờ nhóm spot-check/commit.
 
 ## Parse văn bản OCR (Phase 1)
 
@@ -64,6 +64,20 @@ rows = draw_sample(
 - `-` khi cộng tổng coi là 0 và gắn cờ `nil_as_zero` (cấu hình được); thiếu/UNRESOLVED thì check ra `NOT_EVALUABLE`, không bao giờ thành 0.
 - Check FAIL chỉ gắn cờ vào fact (`validation_failed:<quan_hệ>`), không đổi giá trị hay trạng thái.
 - Bản nháp thay đổi spec/DEVIATIONS theo quyết định dữ liệu năm: `docs/DRAFT_SPEC_CHANGES.md` (chờ nhóm duyệt).
+
+## Phát hiện bất thường (Phase 5)
+
+```python
+from steel_xai.anomaly import detect_anomalies, candidate_rows, write_candidates_csv
+
+result = detect_anomalies(validated.facts)  # giai đoạn gốc và mốc năm đọc từ configs/dataset.yaml
+print(result.summary())  # kỳ gắn cờ / kỳ xét được, theo loại (spec mục 8.4)
+write_candidates_csv(result, "candidates.csv")  # danh sách ứng viên để NGƯỜI chọn ca
+```
+
+- Hai loại (tồn kho, biên gộp), hai chiều, chỉ YoY theo năm tài chính, không LLM. Luật và ngưỡng ở `configs/anomaly.yaml`.
+- **Ngưỡng hiện là đề xuất khởi điểm, chưa phải quyết định của nhóm** (`provisional_thresholds: true`, mọi bất thường mang cờ này).
+- Nền lịch sử và peer chỉ dùng thông tin có tại kỳ đang xét; năm từ `reference_only_from_year` trở đi không bao giờ được dùng. Không đủ lịch sử thì cờ `weak_baseline`, thiếu peer thì cờ `peer_missing`.
 
 ## Cài đặt
 

@@ -185,3 +185,44 @@ def test_reconciliation_markdown_without_comparisons_says_none_yet():
 def test_unresolved_fact_with_reference_is_reported_not_hidden():
     rep = _rep([mk("cogs", None, ValueStatus.UNRESOLVED)], "5")
     assert rep["counts"]["FACT_NOT_OK"] == 1 and rep["mismatch_rate"] is None
+
+
+# ---------------------------------------------------------------- phát hiện khi chạy dữ liệu thật
+
+
+def test_two_tier_header_with_annual_wording_in_parent_cell():
+    # HSG: ô cha "Năm kết thúc ngày", ô con "30/9/2022 VND" (từ "năm" không nằm trong ô con)
+    body = _table(
+        '<tr><td rowspan="2"></td><td rowspan="2">Mã số</td><td rowspan="2">Thuyết minh</td>'
+        '<td colspan="2">Năm kết thúc ngày</td></tr>',
+        "<tr><td>30/9/2022 VND</td><td>30/9/2021 VND</td></tr>",
+        _row(
+            "Doanh thu thuần về bán hàng và cung cấp dịch vụ (10 = 01 - 02)", "10", "26", "5", "4"
+        ),
+    )
+    r = normalize(_ocr(body), settings=S)
+    f = _fact(r, "FY2022", "net_revenue")
+    assert f.value == Decimal(5) and f.fiscal_period_end == "2022-09-30"
+    assert _fact(r, "FY2021", "net_revenue").value == Decimal(4)
+
+
+def test_two_tier_header_with_parent_saying_six_months_is_still_rejected():
+    body = _table(
+        '<tr><td rowspan="2"></td><td rowspan="2">Mã số</td><td rowspan="2">Thuyết minh</td>'
+        '<td colspan="2">6 tháng kết thúc ngày</td></tr>',
+        "<tr><td>30/6/2022 VND</td><td>30/6/2021 VND</td></tr>",
+        _row("Doanh thu thuần về bán hàng và cung cấp dịch vụ", "10", "26", "5", "4"),
+    )
+    assert normalize(_ocr(body), settings=S).facts == ()
+
+
+def test_title_saying_nam_does_not_make_a_bare_date_annual():
+    # Tiêu đề bảng có chữ "năm" nhưng cột chỉ ghi "30/6/2022": báo cáo 6 tháng, không phải cả năm.
+    body = _table(
+        '<tr><td rowspan="2"></td><td rowspan="2">Mã số</td><td rowspan="2">Thuyết minh</td>'
+        '<td colspan="2">Báo cáo kết quả kinh doanh năm 2022 (soát xét)</td></tr>',
+        "<tr><td>30/6/2022</td><td>30/6/2021</td></tr>",
+        _row("Doanh thu thuần về bán hàng và cung cấp dịch vụ", "10", "26", "5 VND", "4 VND"),
+    )
+    r = normalize(_ocr(body), settings=S)
+    assert [f for f in r.facts if f.metric == "net_revenue" and f.value is not None] == []

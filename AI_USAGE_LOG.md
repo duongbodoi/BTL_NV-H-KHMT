@@ -242,3 +242,37 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+
+---
+
+## 2026-10-23 — Phase 5 (Anomaly engine)
+
+**Công cụ:** Claude Code (Claude Sonnet 5.5).
+
+**Bối cảnh:** nhóm yêu cầu làm tiếp Phase 5 khi Phase 3-4 chưa được đánh dấu COMPLETED (chưa spot-check PDF, chưa điền mẫu đối chiếu). Claude đã nêu điều này trong báo cáo. Ngưỡng và chọn ca là việc của người (spec mục 21.1).
+
+**Việc Claude đã làm:**
+- Audit-first: `anomaly/` chỉ có `__init__.py` rỗng; `anomaly.yaml` chỉ có khung (`thresholds: {}`); Phase 0-4 đã commit (`9582154`). Chạy toàn bộ 29 tài liệu `consolidated` của ViFinQA qua Phase 2-4 (trong thư mục scratchpad, không commit) để xem dữ liệu thật trước khi thiết kế.
+- `contracts.Anomaly`; `anomaly/{settings,detect}.py`; `configs/anomaly.yaml` viết lại; `tests/test_anomaly.py`, `tests/test_anomaly_review.py`.
+- Sửa Phase 3 `mapping.py` + `normalization.yaml` (header hai tầng có chữ "năm" ở ô cha) sau khi dữ liệu thật cho thấy HSG 2019–2023 mất toàn bộ chỉ tiêu kết quả kinh doanh.
+
+**Lỗi/sai sót bắt được:**
+- Khi chạy dữ liệu thật: HSG 2019–2023 không có doanh thu/giá vốn/lợi nhuận gộp (header "Năm kết thúc ngày" + "30/9/2022"). Đã sửa; sau đó chạy lại: đủ dữ liệu trừ NKG FY2019.
+- Khi viết test: nhiều lỗi dữ liệu tổng hợp của chính test (giá vốn = 1 làm số ngày tồn kho phình ra; doanh thu không đổi làm luật tồn kho − doanh thu cùng bị vượt); sửa test, không sửa ngưỡng.
+- Review độc lập (subagent): 0 CRITICAL, 1 HIGH, 5 MEDIUM, 5 LOW, đều có input tái hiện:
+  - HIGH: fact trùng khóa (cùng công ty/năm/metric) bị ghi đè theo thứ tự đầu vào → kết quả phụ thuộc thứ tự.
+  - MEDIUM: kỳ có dữ liệu hỏng hoàn toàn biến mất khỏi mẫu số; peer có năm tài chính kết thúc muộn hơn vẫn được dùng (dùng số "sau" mốc khóa sổ); cờ `peer_fiscal_end_differs` bỏ sót khi thiếu ngày và gắn thừa khi công ty không đủ tư cách peer; cờ chất lượng của peer và nền lịch sử không truyền; bản sửa `_fiscal` của Phase 3 quá rộng (chỉ cần chữ "năm" trong tiêu đề bảng là coi báo cáo 6 tháng là cả năm).
+  - LOW: `anomaly_types` lặp nhân đôi bản ghi; cờ `days_in_period_missing` gắn sai lý do; đơn vị không được kiểm; `asof_dates` không validate; test yếu (một test lấy nhầm evaluation).
+  - Đã sửa toàn bộ, kèm test hồi quy.
+
+**Phần người cần tự xác minh:**
+- **Ngưỡng:** đọc `configs/anomaly.yaml`. Mọi con số là đề xuất khởi điểm của Claude, **không phải quyết định của nhóm**; tỷ lệ bất thường hiện 56–67% (quá cao). Chốt ngưỡng và chọn luật giữ lại trên 5 ca dev, rồi đặt `provisional_thresholds: false`.
+- **Hướng bất thường** (mục 3 của `PHASE_5.md`): hướng là hướng của độ lệch theo luật vượt ngưỡng, có thể khác dấu biến động thô; quyết định có giữ không.
+- **Khai `asof_dates`** (ngày công bố BCTC theo công ty và năm) trong `anomaly.yaml`; Phase 7 cần.
+- **Spot-check tay một chỉ báo:** ví dụ HPG FY2022 biên gộp 11,85% so 27,46% năm 2021, thay đổi ≈ -15,61 điểm % (số này lấy từ fixture HPG 2022; kiểm với BCTC gốc).
+- **Danh sách ứng viên:** chạy `candidate_rows` / `write_candidates_csv` để chọn ca; Claude không chọn ca.
+- Hiểu `peer_excluded_later_fiscal_end`: HSG (30/9) không dùng được peer 31/12 cùng nhãn năm, vì số của họ chưa có khi HSG khóa sổ.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

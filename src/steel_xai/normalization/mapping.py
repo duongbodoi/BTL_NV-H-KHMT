@@ -285,7 +285,8 @@ def _fiscal(
         return None, None, [], R_PERIOD_UNUSABLE
     if p.quarter is not None:
         return None, None, [], R_NOT_ANNUAL
-    text = _DAY_MONTH_RE.sub(" ", norm_key(p.text))
+    # Header hai tầng: "Năm kết thúc ngày" (ô cha) + "30/9/2022 VND" (ô con) → xét cả đường dẫn.
+    text = _DAY_MONTH_RE.sub(" ", norm_key(" ".join((*v.column_header, p.text))))
     if p.date is not None:
         try:
             d = dt.date.fromisoformat(p.date)
