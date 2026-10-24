@@ -478,3 +478,49 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+## 2026-10-25 — Chạy thử Gemini thật, sửa lỗi
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:**
+- Điền `reviewed_by: Nguyễn Tùng Dương` cho 22 giả thuyết theo xác nhận của nhóm.
+- Gọi Gemini thật: `gemini-2.5-flash` trả 404 (đóng với tài khoản mới; lỗi chọn model của Claude ngày 2026-10-24); `gemini-3.8-flash` ~100 s hoặc timeout; `gemini-3.6-flash` 503; chọn `gemini-3.5-flash-lite`. Thêm gọi lại khi timeout/lỗi mạng + 1 test.
+- Chạy `run_report.py --call-api` cho `HPG|FY2021|inventory_increase|up` với danh mục nguồn GIẢ và bỏ qua lỗi `critical_missing_evidence` CHỈ trong bộ nhớ (không ghi vào repo): `accepted_after_retry`, 2 lời gọi, 8.344/1.976 token; nháp đầu bị từ chối vì 1 khẳng định không có nguồn.
+
+**Lỗi/sai sót bắt được:** báo cáo sinh ra có một câu gán nhãn sai ý nghĩa số: "tỷ trọng nguyên vật liệu trong tồn kho gộp là 50,9%" trong khi 50,9% là tỷ trọng của nguyên vật liệu trong MỨC TĂNG tồn kho (N30); tỷ trọng trong tồn kho gộp là 47,1% (N10). Bộ kiểm số không bắt được vì con số khớp nguồn được trích. Đây là loại lỗi cần người chấm (citation support rate).
+
+**Phần người cần tự xác minh:**
+- Thêm file danh mục nguồn `HYPOTHESIS_LIBRARY_DRAFT.md` (S0–S22) và viết `critical_missing_evidence` cho INV-7, GM-7, DEC-1, DEC-2, DEC-5, DEC-6, DEC-7.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-
+
+## 2026-10-25 — Ghép nguồn, hoàn tất thư viện, giá 2023–2024
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:**
+- `library_draft_update.yaml` của nhóm dựa trên bản cũ (không có `checks`, status draft). Claude chỉ ghép trường `sources` (tên, ngày, link) vào thư viện hiện tại, ghi mỗi nguồn thành một chuỗi "tên (ngày) link"; không còn mã S0..
+- Ghi `critical_missing_evidence` cho INV-7, GM-7, DEC-1, DEC-2, DEC-5, DEC-6, DEC-7: câu do Claude GỢI Ý, nhóm (Nguyễn Tùng Dương) duyệt nguyên văn ngày 2026-10-25.
+- Thư viện tải được: 22 `reviewed` (14 tồn kho, 8 biên gộp). Sửa các test còn khẳng định "chưa có gì reviewed"; test "không nêu tên công ty" giờ bỏ qua `sources` như validator (tên nguồn như "KBSV — Báo cáo cập nhật HPG" là trích dẫn).
+- "Giá nguyên vật liệu full.xlsx" → `data/external/vsa_prices.xlsx`: 2019–2022 trùng khớp bản cũ, thêm 2023–2024; sinh lại `hrc_price.csv`, `coking_coal_price.csv` (72 tháng).
+- Chạy lại `run_quant_checks.py`, `run_verdicts.py`: 83/83 verdict không đổi (11 ca đều ≤ FY2022, as-of trước dữ liệu mới).
+
+**Phần người cần tự xác minh:** đọc lại 7 câu `critical_missing_evidence`; đối chiếu vài tháng 2023–2024 với VSA.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-
+
+## 2026-10-25 — Chạy báo cáo thật 11 ca bằng Gemini, sửa bộ kiểm bắt oan
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:** chạy `run_report.py --call-api` cho 11 ca (run1: 3/11 chấp nhận). Kiểm lại từng vi phạm bằng script không gọi API; sửa 4 lỗi bắt oan trong bộ kiểm của chính Claude (Phase 11): nhắc lại giả thuyết bị coi là nhân quả, `làm giả` khớp `làm giảm`, kiểm chiều cho số là mức, phủ định ngoài cửa sổ. Thêm 9 test. run2: 10/11, sau sửa: 11/11.
+
+**Lỗi/sai sót bắt được:** 4 lỗi trên là lỗi thiết kế bộ kiểm của Claude ở Phase 11, chỉ lộ ra khi chạy với LLM thật. Claude cũng tự ghi nhầm "nhóm quyết định đánh dấu COMPLETED" vào PHASE_6.md (nhóm chưa nói), đã sửa ngay.
+
+**Phần người cần tự xác minh:** đọc vài báo cáo trong `data/processed/reports/*.md` để bắt câu sai nghĩa; quyết hai chỗ còn nghi bắt oan (ghi ở PHASE_11.md).
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

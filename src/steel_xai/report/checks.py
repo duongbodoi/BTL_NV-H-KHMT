@@ -46,7 +46,11 @@ _DATES = re.compile(r"\b(\d{4})-\d{2}(?:-\d{2})?\b|\b\d{1,2}/\d{1,2}/(\d{4})\b")
 _PAIR = re.compile(r"(?<![\w/,.])(\d+)\s*/\s*(\d+)(?![\w/,.])")
 _STATUS_EN = re.compile(r"\b(SUPPORTED|PARTIAL|UNVERIFIED|CONTRADICTED)\b", re.IGNORECASE)
 _NEGATED = re.compile(r"\b(không|chưa)(\s+\S+){0,3}\s*$")
+# ranh giới câu/vế cho cụm thuật lại: sau dấu này là một khẳng định mới
+_CLAUSE_SPLIT = re.compile(r"[.;:!?](\s|$)")
 _DIRECTION = re.compile(r"\b(tăng(?!\s+trưởng)|giảm)\b")
+_NEG_BEFORE = re.compile(r"\b(không|chưa)\s+$")
+_LEVEL_BEFORE = re.compile(r"\b(từ|xuống|lên|còn|mức)\s*$")
 _YEAR_UNIT = re.compile(r"\s*(usd|vnd|đồng|tấn)\b", re.IGNORECASE)
 
 
@@ -149,12 +153,21 @@ def _sub_blank(pattern: re.Pattern[str], text: str, keep=lambda m: True) -> str:
     return pattern.sub(lambda m: " " * len(m.group(0)) if keep(m) else m.group(0), text)
 
 
-def _first_unnegated(patterns: tuple[re.Pattern[str], ...], low: str) -> str | None:
-    """Mẫu đầu tiên khớp mà không có "không/chưa" trong ba từ ngay trước."""
+def _first_unnegated(
+    patterns: tuple[re.Pattern[str], ...],
+    low: str,
+    attribution: tuple[re.Pattern[str], ...] = (),
+) -> str | None:
+    """Mẫu đầu tiên khớp mà không có "không/chưa" trong ba từ ngay trước, và (nếu có `attribution`)
+    không nằm sau một cụm thuật lại ("giả thuyết", "cho rằng") trong cùng câu/vế."""
     for p in patterns:
         for m in p.finditer(low):
-            if not _NEGATED.search(low[max(0, m.start() - 40) : m.start()]):
-                return p.pattern
+            if _NEGATED.search(low[max(0, m.start() - 40) : m.start()]):
+                continue
+            clause = _CLAUSE_SPLIT.split(low[: m.start()])[-1]
+            if any(a.search(clause) for a in attribution):
+                continue
+            return p.pattern
     return None
 
 
@@ -178,7 +191,11 @@ class _Checker:
         return t
 
     def _fact_ok(self, tok: NumberToken, n: NumberFact, direction: str | None) -> bool:
-        if direction == "tăng" and n.value < 0 or direction == "giảm" and n.value > 0:
+        # số đầu vào là MỨC (biên gộp năm X = 11,5%): "giảm xuống 11,5%" đúng dù mức dương;
+        # chiều chỉ kiểm cho số là thay đổi (chỉ báo, kết quả check)
+        if n.role != "input" and (
+            direction == "tăng" and n.value < 0 or direction == "giảm" and n.value > 0
+        ):
             return False
         return matches_value(tok, n.value, n.unit, self.s.relative_tolerance, self.steps[n.id])
 
@@ -213,8 +230,18 @@ class _Checker:
         prev_end = 0
         for tok in tokens:
             window = text[max(prev_end, tok.start - 30) : tok.start]
-            dirs = _DIRECTION.findall(_norm(window))
-            direction = dirs[-1] if dirs else None
+            w_start = max(prev_end, tok.start - 30)
+            low_w = _norm(window)
+            dirs = list(_DIRECTION.finditer(low_w))
+            last = dirs[-1] if dirs else None
+            direction = last.group(1) if last is not None else None
+            if last is not None:
+                at = w_start + last.start()
+                # "không giảm"/"chưa tăng": không nêu chiều (nhìn cả trước cửa sổ)
+                if _NEG_BEFORE.search(_norm(text[max(0, at - 12) : at])):
+                    direction = None
+            if _LEVEL_BEFORE.search(low_w):  # "giảm từ 132,7 ngày xuống 63,0": số là mức
+                direction = None
             prev_end = tok.end
             shown = c.text[tok.start : tok.end].strip()
             if not tok.candidates:
@@ -342,7 +369,7 @@ class _Checker:
         supported = self.status_of.get(c.hypothesis_id) == "SUPPORTED"
         # mục missing nói về lý do THIẾU DỮ LIỆU ("chưa kiểm được vì thiếu..."), không phải nhân quả
         if not hedged and not supported and c.section != "missing":
-            hit = _first_unnegated(s.causal, low)
+            hit = _first_unnegated(s.causal, low, s.attribution)
             if hit:
                 out.append(
                     Violation(

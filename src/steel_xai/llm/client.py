@@ -382,9 +382,10 @@ class GeminiTransport:
     (`responseMimeType: application/json` + `responseJsonSchema`).
 
     Dùng để chạy thử bằng hạn mức miễn phí. `effort` KHÔNG được gửi (Gemini dùng cấu hình
-    thinking riêng, để mặc định của model). Không gửi temperature/top_p/top_k. Lỗi 429/500/503
-    (hạn mức free rất thấp) được gọi lại sau `backoff_s` giây, tối đa `rate_limit_retries` lần.
-    CHƯA được thử với API thật trong repo này (test chỉ dùng hàm HTTP giả).
+    thinking riêng, để mặc định của model). Không gửi temperature/top_p/top_k. Lỗi 429/500/503 và
+    timeout/lỗi mạng (gói free hay quá tải) được gọi lại sau `backoff_s` × (lần thử) giây, tối đa
+    `rate_limit_retries` lần. Đã thử với API thật 2026-10-25 (gemini-3.5-flash-lite); test dùng
+    hàm HTTP giả.
     """
 
     def __init__(
@@ -439,7 +440,13 @@ class GeminiTransport:
         data = json.dumps(body, ensure_ascii=False).encode("utf-8")
         url = GEMINI_URL.format(model=model)
         for attempt in range(self._retries + 1):
-            status, text = self._post(url, headers, data, timeout_s)
+            try:
+                status, text = self._post(url, headers, data, timeout_s)
+            except OSError:  # timeout/mất mạng (gói free hay treo): gọi lại như 429/503
+                if attempt == self._retries:
+                    raise
+                self._sleep(self._backoff * (attempt + 1))
+                continue
             if status not in _GEMINI_RETRY_STATUS or attempt == self._retries:
                 break
             self._sleep(self._backoff * (attempt + 1))

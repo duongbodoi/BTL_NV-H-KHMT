@@ -93,9 +93,9 @@ Nhóm chọn Gemini (hạn mức free của Google AI Studio) để chạy thử
 - `llm/client.py`: thêm `GeminiTransport` (REST `generateContent`, chỉ dùng thư viện chuẩn, không thêm phụ thuộc) và `make_transport(llm_cfg)` chọn theo `llm.provider`. Ba script `run_text_evidence.py`, `run_verdicts.py`, `run_report.py` dùng `make_transport`.
 - Structured output: `responseMimeType: application/json` + `responseJsonSchema` (schema giữ nguyên; code vẫn kiểm lại). Phần "thought" bị bỏ khỏi văn bản; `thoughtsTokenCount` cộng vào token đầu ra. `finishReason` STOP → `end_turn`, MAX_TOKENS → `max_tokens`, SAFETY/PROHIBITED_CONTENT/BLOCKLIST/SPII và prompt bị chặn → `refusal`; lý do khác → client báo lỗi.
 - `effort` **không gửi** cho Gemini (dùng thinking mặc định của model). Không gửi temperature/top_p/top_k.
-- Lỗi 429/500/503 gọi lại theo `llm.gemini.rate_limit_retries`/`backoff_s`; lỗi khác (400...) báo ngay. Độ trễ ghi trong log vì vậy gồm cả thời gian chờ.
-- `configs/llm.yaml`: `provider: gemini`, `model: gemini-2.5-flash`, `api_key_env: GEMINI_API_KEY`.
+- Lỗi 429/500/503 và timeout/lỗi mạng gọi lại theo `llm.gemini.rate_limit_retries`/`backoff_s`; lỗi khác (400...) báo ngay. Độ trễ ghi trong log vì vậy gồm cả thời gian chờ.
+- `configs/llm.yaml`: `provider: gemini`, `model: gemini-3.5-flash-lite`, `api_key_env: GEMINI_API_KEY`. Đo thật 2026-10-25 (gói free): `gemini-2.5-flash` 404 (đóng với tài khoản mới), `gemini-3.8-flash` ~100 s hoặc timeout với câu hỏi một dòng, `gemini-3.6-flash` 503 quá tải, `gemini-3.5-flash-lite` 8–27 s. Lite yếu hơn: chỉ để chạy thử.
 - Test: 9 test mới với hàm HTTP giả (không gọi mạng).
-- **Chưa thử với API thật.** Tên trường `responseJsonSchema` đúng theo tài liệu Google mà Claude biết, nhưng trang tham chiếu hiện tại Claude đọc được không hiển thị phần `GenerationConfig`; nếu lần gọi đầu trả HTTP 400 về schema thì báo lại để sửa.
+- **Đã gọi API thật (2026-10-25)** với schema nhỏ có `enum` và `additionalProperties: false`: `responseJsonSchema` được chấp nhận, JSON trả về qua kiểm schema của code.
 - Hạn mức free: dữ liệu gửi lên có thể được Google dùng để cải thiện sản phẩm (theo trang giá). Chỉ gửi BCTC công khai.
 - Kết quả chạy bằng Gemini **không thay** cho cấu hình đánh giá chính thức nếu nhóm chốt model khác; xem `DEVIATIONS_FROM_MIDTERM.md`.

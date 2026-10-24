@@ -157,7 +157,7 @@ def test_team_iron_ore_csv_matches_the_xlsx_and_is_sane():
 def test_team_vsa_csvs_match_the_xlsx(name, col):
     """Bảng VSA của nhóm (giá đầu tháng, USD/tấn): ô khoảng giá lấy trung bình hai đầu."""
     data = read_series_csv(REPO / "data" / "external" / f"{name}.csv")
-    assert len(data) == 48 and min(data) == (2019, 1) and max(data) == (2022, 12)
+    assert len(data) == 72 and min(data) == (2019, 1) and max(data) == (2024, 12)
     assert all(D(50) < v < D(1500) for v in data.values())
     rows = monthly_series_from_xlsx(
         REPO / "data" / "external" / "vsa_prices.xlsx",

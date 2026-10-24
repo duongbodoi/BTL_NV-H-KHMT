@@ -1,0 +1,666 @@
+# Thư viện giả thuyết — BẢN NHÁP. Danh mục nguồn đầy đủ ở HYPOTHESIS_LIBRARY_DRAFT.md.
+# Chưa có giả thuyết nào được duyệt: status: draft, reviewed_by: null.
+# Trường `checks` (dạng có cấu trúc) sẽ được thêm ở Phase 6 theo spec mục 10.1.
+# Metric có hậu tố "*" là chỉ tiêu Phase 3 chưa trích, cần bổ sung.
+# direction: up | down | both. anomaly_type giữ tên khóa trong code (inventory_increase xét hai chiều).
+
+hypotheses:
+
+  - id: inventory_raw_material_stockpiling
+    code: INV-1
+    anomaly_type: inventory_increase
+    direction: up
+    claim: Tồn kho tăng do doanh nghiệp tích trữ nguyên vật liệu khi giá đầu vào ở vùng thấp.
+    business_rationale: Doanh nghiệp thép mua trữ nguyên liệu giá rẻ để hưởng lợi khi giá tăng; đây là "con dao hai lưỡi" khi giá đảo chiều.
+    expected_quantitative_evidence:
+      - raw_materials tăng và chiếm phần lớn mức tăng tồn kho
+      - giá quặng sắt hoặc HRC cuối kỳ ở vùng thấp so với trung vị nhiều năm (chỉ dùng dữ liệu đến mốc as-of)
+    expected_textual_evidence: [dự trữ nguyên liệu, tích trữ, giá nguyên liệu thấp]
+    contradictory_evidence:
+      - giá đầu vào đang ở vùng cao
+      - mức tăng tồn kho chủ yếu ở thành phẩm
+    required_external_data: [iron_ore_price, hrc_price]
+    critical_missing_evidence:
+      - không có giá đầu vào tại thời điểm cuối kỳ
+    testable_with_annual_data: partial
+    sources:
+      - title: "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+        date: ""
+      - title: "Tạp chí Công Thương — Tồn kho các doanh nghiệp trước bối cảnh giá thép tăng cao"
+        date: "24/02/2019"
+        url: "https://tapchicongthuong.vn/ton-kho-cac-doanh-nghiep-truoc-boi-canh-gia-thep-tang-cao-60518.htm"
+      - title: "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép"
+        date: "05/05/2021"
+        url: "https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
+      - title: "VCSC, VNDirect (qua VietnamFinance) — Doanh nghiệp thép: áp lực sau giai đoạn thăng hoa"
+        date: "27/02/2022"
+        url: "https://vietnamfinance.vn/doanh-nghiep-thep-ap-luc-sau-giai-doan-thang-hoa-d77178.html"
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_capacity_expansion
+    code: INV-2
+    anomaly_type: inventory_increase
+    direction: up
+    claim: Tồn kho tăng do chuẩn bị mở rộng sản xuất.
+    business_rationale: Dự án công suất mới cần nguyên liệu dự trữ trước khi vận hành.
+    expected_quantitative_evidence:
+      - cip tăng
+      - capex tăng
+      - raw_materials tăng
+    expected_textual_evidence: [dự án, mở rộng công suất, chạy thử, đưa vào vận hành]
+    contradictory_evidence:
+      - cip và capex giảm
+      - dự án bị hoãn hoặc dừng
+    required_external_data: []
+    critical_missing_evidence:
+      - không có bằng chứng nối trực tiếp mở rộng công suất với mức tăng tồn kho
+    testable_with_annual_data: yes
+    sources:
+      - title: "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+        date: ""
+      - title: "KBSV — Báo cáo cập nhật HPG"
+        date: "16/02/2023"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - title: "DSC — Báo cáo cập nhật HPG Q1/2023"
+        date: "05/05/2023"
+        url: "https://extgw.dsc.com.vn/eback/uploads/2023/05/BaoCaoCapNhat_HPG_Q1.2023_DSC.pdf"
+    source_strength: weak   # chưa có nguồn ngoài nối trực tiếp cơ chế
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_weak_demand
+    code: INV-3
+    anomaly_type: inventory_increase
+    direction: up
+    claim: Tồn kho tăng do hàng bán chậm, nhu cầu yếu.
+    business_rationale: Cầu giảm so với kế hoạch làm thành phẩm tồn đọng; tồn kho tăng nhanh hơn doanh thu là tín hiệu xấu về lợi nhuận tương lai.
+    expected_quantitative_evidence:
+      - finished_goods tăng nhanh hơn doanh thu
+      - (Δ tồn kho) − (Δ doanh thu) > 0
+      - số ngày tồn kho tăng
+      - inventory_provision tăng
+    expected_textual_evidence: [tiêu thụ chậm, nhu cầu yếu, sức mua giảm, trích lập dự phòng]
+    contradictory_evidence:
+      - doanh thu tăng mạnh
+      - mức tăng tồn kho nằm ở nguyên vật liệu
+    required_external_data: []
+    critical_missing_evidence:
+      - không tách được thành phần tồn kho (thuyết minh thiếu)
+    testable_with_annual_data: yes
+    sources:
+      - title: "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+        date: ""
+      - title: "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành"
+        date: "09/02/2023"
+        url: "https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - title: "KIS — HSG brief 3Q22"
+        date: "04/11/2022"
+        url: "https://kisvn.vn/wp-content/uploads/2022/11/HSG-brief-3Q22-vie.pdf"
+      - title: "Thomas & Zhang — Inventory changes and future returns (Review of Accounting Studies)"
+        date: "2002"
+        url: "https://doi.org/10.1023/a:1020274002135"
+      - title: "Luchs, Maheshwari & Myring — tín hiệu tồn kho của Lev & Thiagarajan (1993)"
+        date: "không ghi ngày"
+        url: "https://w.aabri.com/manuscripts/111037.pdf"
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_seasonality
+    code: INV-4
+    anomaly_type: inventory_increase
+    direction: both
+    claim: Tồn kho tăng do yếu tố mùa vụ.
+    business_rationale: Tiêu thụ thép xây dựng giảm vào mùa mưa và tăng vào mùa xây dựng; doanh nghiệp tích hàng trước mùa cao điểm.
+    expected_quantitative_evidence:
+      - cùng kỳ các năm trước có đỉnh tồn kho tương tự (cần dữ liệu quý)
+    expected_textual_evidence: [mùa xây dựng, mùa mưa, cao điểm cuối năm]
+    contradictory_evidence:
+      - các năm trước cùng kỳ không có đỉnh
+    required_external_data: []
+    critical_missing_evidence:
+      - không có dữ liệu theo quý
+    testable_with_annual_data: no   # dự kiến UNVERIFIED, phân tích ở RQ3
+    sources:
+      - title: "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+        date: ""
+      - title: "Elibook — HPG: sản lượng tháng 6 giảm nhẹ do chu kỳ mùa mưa"
+        date: "18/07/2024"
+        url: "https://elibook.vn/2024/07/18/hpg-san-luong-thep-tieu-thu-thang-6-giam-nhe-do-chu-ky-mua-mua-loi-nhuan-quy-2-gan-3500-ty/"
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_price_not_volume
+    code: INV-5
+    anomaly_type: inventory_increase
+    direction: up
+    claim: Giá trị tồn kho tăng do giá đầu vào tăng, không phải số lượng tăng.
+    business_rationale: BCTC ghi tồn kho theo giá trị; giá nguyên liệu tăng làm giá trị tồn kho tăng dù lượng không đổi.
+    expected_quantitative_evidence:
+      - mức tăng giá trị tồn kho xấp xỉ mức tăng giá nguyên liệu
+    expected_textual_evidence: [số lượng tồn kho, sản lượng tồn kho (báo cáo thường niên)]
+    contradictory_evidence:
+      - giá đầu vào đi ngang hoặc giảm trong khi tồn kho tăng mạnh
+      - số lượng tồn kho tăng
+    required_external_data: [iron_ore_price, hrc_price]
+    critical_missing_evidence:
+      - BCTC không công bố số lượng tồn kho
+    testable_with_annual_data: partial
+    sources:
+      - title: "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+        date: ""
+      - title: "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép"
+        date: "05/05/2021"
+        url: "https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
+      - title: "VCSC, VNDirect (qua VietnamFinance) — Doanh nghiệp thép: áp lực sau giai đoạn thăng hoa"
+        date: "27/02/2022"
+        url: "https://vietnamfinance.vn/doanh-nghiep-thep-ap-luc-sau-giai-doan-thang-hoa-d77178.html"
+    source_strength: weak   # bài Nhà Đầu tư (05/05/2021) và VCSC, VNDirect (27/02/2022) chỉ hỗ trợ gián tiếp
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_accounting_policy_change
+    code: INV-6
+    anomaly_type: inventory_increase
+    direction: both
+    claim: Biến động tồn kho do thay đổi chính sách kế toán hàng tồn kho.
+    business_rationale: VAS 02 yêu cầu áp dụng nhất quán phương pháp tính giá; thay đổi phương pháp làm thay đổi giá trị tồn kho mà không phản ánh kinh doanh.
+    expected_quantitative_evidence:
+      - biến động không giải thích được bằng các chỉ tiêu hoạt động
+    expected_textual_evidence: [thay đổi chính sách kế toán, phương pháp tính giá hàng tồn kho, bình quân gia quyền, nhập trước xuất trước]
+    contradictory_evidence:
+      - đoạn chính sách hàng tồn kho giữ nguyên giữa hai năm
+    required_external_data: []
+    critical_missing_evidence:
+      - không trích được đoạn chính sách kế toán của một trong hai năm
+    testable_with_annual_data: yes
+    sources:
+      - title: "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+        date: ""
+      - title: "Tạp chí Kinh tế – Tài chính — Nguyên tắc kế toán hàng tồn kho (VAS 02)"
+        date: "26/01/2026"
+        url: "https://nghiencuu.tapchikinhtetaichinh.vn/nguyen-tac-ke-toan-hang-ton-kho-va-luu-y-trong-ap-dung-tai-doanh-nghiep-142966.html"
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_goods_in_transit_timing
+    code: INV-7
+    anomaly_type: inventory_increase
+    direction: up
+    claim: Tồn kho tăng do hàng mua đang đi đường hoặc thời điểm nhập hàng sát cuối kỳ.
+    business_rationale: Doanh nghiệp nhập khẩu nguyên liệu ghi nhận hàng đi đường vào tồn kho; lô hàng lớn về sát ngày khóa sổ làm tồn kho cuối kỳ tăng tạm thời.
+    expected_quantitative_evidence:
+      - goods_in_transit* tăng và chiếm phần lớn mức tăng tồn kho
+      - phải trả người bán tăng
+    expected_textual_evidence: [hàng mua đang đi trên đường, nhập khẩu]
+    contradictory_evidence:
+      - hàng đi đường ổn định
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources:
+      - title: "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành"
+        date: "09/02/2023"
+        url: "https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - title: "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép"
+        date: "05/05/2021"
+        url: "https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
+    extension_beyond_midterm: true
+    status: draft
+    reviewed_by: null
+
+  - id: margin_selling_price
+    code: GM-1
+    anomaly_type: gross_margin_change
+    direction: both
+    claim: Biên gộp thay đổi do giá bán thép thay đổi.
+    business_rationale: Giá bán biến động nhanh hơn giá vốn đã ghi nhận làm biên gộp dịch chuyển.
+    expected_quantitative_evidence:
+      - giá thép (HRC hoặc thép xây dựng theo sản phẩm chính) đổi cùng chiều biên gộp trong kỳ
+    expected_textual_evidence: [giá bán, điều chỉnh giá bán]
+    contradictory_evidence:
+      - giá thép đi ngược chiều biên gộp
+    required_external_data: [steel_price]
+    critical_missing_evidence:
+      - không có giá bán bình quân của doanh nghiệp
+    testable_with_annual_data: partial
+    sources:
+      - title: "DSC — Phân tích chuỗi giá trị ngành thép Việt Nam"
+        date: "không ghi ngày"
+        url: "https://www.dsc.com.vn/kien-thuc/chuoi-gia-tri-nganh-thep"
+      - title: "KBSV — Báo cáo cập nhật HPG"
+        date: "16/02/2023"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - title: "Vietcap (qua Tạp chí Công Thương) — HPG: thị phần thép xây dựng cao kỷ lục, biên lợi nhuận neo cao"
+        date: "16/09/2024"
+        url: "https://tapchicongthuong.vn/tap-doan-hoa-phat--hpg-thi-phan-thep-xay-dung-len-cao-ky-luc--du-kien-bien-loi-nhuan-neo-cao-126703.htm"
+    status: draft
+    reviewed_by: null
+
+  - id: margin_input_cost_lag
+    code: GM-2
+    anomaly_type: gross_margin_change
+    direction: both
+    claim: Biên gộp thay đổi do giá nguyên liệu đầu vào thay đổi, có độ trễ.
+    business_rationale: Nguyên liệu chiếm 65–75% giá vốn; quặng sắt và than cốc (doanh nghiệp lò cao) hoặc HRC (doanh nghiệp tôn mạ) quyết định chênh lệch giá bán – giá vốn.
+    expected_quantitative_evidence:
+      - giá đầu vào đổi ngược chiều biên gộp sau độ trễ đã cấu hình
+      - cogs / net_revenue đổi theo
+    expected_textual_evidence: [giá nguyên liệu, chi phí đầu vào]
+    contradictory_evidence:
+      - giá đầu vào đi cùng chiều biên gộp
+    required_external_data: [iron_ore_price, coking_coal_price, hrc_price]
+    critical_missing_evidence:
+      - không có chuỗi giá đầu vào phù hợp với loại doanh nghiệp
+    testable_with_annual_data: partial
+    sources:
+      - title: "DSC — Phân tích chuỗi giá trị ngành thép Việt Nam"
+        date: "không ghi ngày"
+        url: "https://www.dsc.com.vn/kien-thuc/chuoi-gia-tri-nganh-thep"
+      - title: "BVSC (qua Tạp chí Công Thương) — Biên lợi nhuận NKG và HSG cải thiện quý 2/2023"
+        date: "11/07/2023"
+        url: "https://tapchicongthuong.vn/bvsc--bien-loi-nhuan-cua-thep-nam-kim-va-tap-doan-hoa-sen-duoc-cai-thien-trong-quy-2-2023-107336.htm"
+      - title: "KBSV — Báo cáo cập nhật HPG"
+        date: "16/02/2023"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - title: "Vietcap (qua Tạp chí Công Thương) — HPG: thị phần thép xây dựng cao kỷ lục, biên lợi nhuận neo cao"
+        date: "16/09/2024"
+        url: "https://tapchicongthuong.vn/tap-doan-hoa-phat--hpg-thi-phan-thep-xay-dung-len-cao-ky-luc--du-kien-bien-loi-nhuan-neo-cao-126703.htm"
+    status: draft
+    reviewed_by: null
+
+  - id: margin_inventory_cost_effect
+    code: GM-3
+    anomaly_type: gross_margin_change
+    direction: both
+    claim: Biên gộp thay đổi do hàng tồn kho mua giá cao (khi giá giảm) hoặc giá thấp (khi giá tăng).
+    business_rationale: Giá vốn theo bình quân gia quyền phản ánh giá mua trước đó; tồn kho lớn khuếch đại tác động của biến động giá lên biên gộp.
+    expected_quantitative_evidence:
+      - tồn kho đầu kỳ lớn so với giá vốn
+      - giá đầu vào giảm (biên giảm) hoặc tăng (biên tăng) trong kỳ
+      - biên gộp đổi mạnh hơn mức chênh lệch giá bán – giá đầu vào
+    expected_textual_evidence: [hàng tồn kho giá cao, giá vốn cao, nguyên liệu giá rẻ]
+    contradictory_evidence:
+      - tồn kho đầu kỳ nhỏ
+      - giá đầu vào ổn định
+    required_external_data: [iron_ore_price, hrc_price]
+    critical_missing_evidence:
+      - không có giá đầu vào trong kỳ
+    testable_with_annual_data: partial
+    sources:
+      - title: "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành"
+        date: "09/02/2023"
+        url: "https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - title: "KIS — HSG brief 3Q22"
+        date: "04/11/2022"
+        url: "https://kisvn.vn/wp-content/uploads/2022/11/HSG-brief-3Q22-vie.pdf"
+      - title: "DSC — Báo cáo cập nhật HPG Q1/2023"
+        date: "05/05/2023"
+        url: "https://extgw.dsc.com.vn/eback/uploads/2023/05/BaoCaoCapNhat_HPG_Q1.2023_DSC.pdf"
+      - title: "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép"
+        date: "05/05/2021"
+        url: "https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
+      - title: "VCSC, VNDirect (qua VietnamFinance) — Doanh nghiệp thép: áp lực sau giai đoạn thăng hoa"
+        date: "27/02/2022"
+        url: "https://vietnamfinance.vn/doanh-nghiep-thep-ap-luc-sau-giai-doan-thang-hoa-d77178.html"
+    extension_beyond_midterm: true
+    status: draft
+    reviewed_by: null
+
+  - id: margin_inventory_provision
+    code: GM-4
+    anomaly_type: gross_margin_change
+    direction: both
+    claim: Biên gộp thay đổi do trích lập hoặc hoàn nhập dự phòng giảm giá hàng tồn kho.
+    business_rationale: Dự phòng theo giá trị thuần có thể thực hiện được (VAS 02); trích lập kéo biên xuống, hoàn nhập đẩy biên lên.
+    expected_quantitative_evidence:
+      - inventory_provision_charge* (thuyết minh giá vốn) lớn so với mức thay đổi lợi nhuận gộp
+      - inventory_provision đổi mạnh
+    expected_textual_evidence: [trích lập dự phòng, hoàn nhập dự phòng]
+    contradictory_evidence:
+      - biến động dự phòng nhỏ so với mức thay đổi lợi nhuận gộp
+    required_external_data: []
+    critical_missing_evidence:
+      - thuyết minh giá vốn không tách dòng dự phòng
+    testable_with_annual_data: yes
+    sources:
+      - title: "BVSC (qua Tạp chí Công Thương) — Biên lợi nhuận NKG và HSG cải thiện quý 2/2023"
+        date: "11/07/2023"
+        url: "https://tapchicongthuong.vn/bvsc--bien-loi-nhuan-cua-thep-nam-kim-va-tap-doan-hoa-sen-duoc-cai-thien-trong-quy-2-2023-107336.htm"
+      - title: "KBSV — Báo cáo cập nhật HPG"
+        date: "16/02/2023"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - title: "KIS — HSG brief 3Q22"
+        date: "04/11/2022"
+        url: "https://kisvn.vn/wp-content/uploads/2022/11/HSG-brief-3Q22-vie.pdf"
+      - title: "Tạp chí Kinh tế – Tài chính — Nguyên tắc kế toán hàng tồn kho (VAS 02)"
+        date: "26/01/2026"
+        url: "https://nghiencuu.tapchikinhtetaichinh.vn/nguyen-tac-ke-toan-hang-ton-kho-va-luu-y-trong-ap-dung-tai-doanh-nghiep-142966.html"
+    extension_beyond_midterm: true
+    status: draft
+    reviewed_by: null
+
+  - id: margin_product_market_mix
+    code: GM-5
+    anomaly_type: gross_margin_change
+    direction: both
+    claim: Biên gộp thay đổi do cơ cấu sản phẩm hoặc thị trường (nội địa/xuất khẩu) thay đổi.
+    business_rationale: Sản phẩm và thị trường có biên khác nhau (thép xây dựng được bảo hộ thuế nhập khẩu, HRC và tôn mạ hướng xuất khẩu chịu cạnh tranh).
+    expected_quantitative_evidence:
+      - doanh thu theo sản phẩm/thị trường/bộ phận* dịch chuyển
+    expected_textual_evidence: [cơ cấu sản phẩm, tỷ trọng xuất khẩu, thị trường xuất khẩu]
+    contradictory_evidence:
+      - cơ cấu không đổi
+    required_external_data: []
+    critical_missing_evidence:
+      - thuyết minh không tách doanh thu theo sản phẩm hoặc thị trường
+    testable_with_annual_data: partial
+    sources:
+      - title: "DSC — Phân tích chuỗi giá trị ngành thép Việt Nam"
+        date: "không ghi ngày"
+        url: "https://www.dsc.com.vn/kien-thuc/chuoi-gia-tri-nganh-thep"
+      - title: "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành"
+        date: "09/02/2023"
+        url: "https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - title: "Vietcap (qua Tạp chí Công Thương) — HPG: thị phần thép xây dựng cao kỷ lục, biên lợi nhuận neo cao"
+        date: "16/09/2024"
+        url: "https://tapchicongthuong.vn/tap-doan-hoa-phat--hpg-thi-phan-thep-xay-dung-len-cao-ky-luc--du-kien-bien-loi-nhuan-neo-cao-126703.htm"
+    extension_beyond_midterm: true
+    status: draft
+    reviewed_by: null
+
+  - id: margin_capacity_utilization
+    code: GM-6
+    anomaly_type: gross_margin_change
+    direction: both
+    claim: Biên gộp thay đổi do công suất sử dụng thay đổi (chi phí cố định phân bổ trên sản lượng).
+    business_rationale: Dừng hoặc tái khởi động lò cao làm chi phí cố định trên mỗi tấn thay đổi.
+    expected_quantitative_evidence:
+      - doanh thu giảm và biên gộp giảm mạnh hơn mức giảm giá bán
+      - sản lượng giảm (báo cáo thường niên)
+    expected_textual_evidence: [dừng lò, giảm công suất, tái khởi động]
+    contradictory_evidence:
+      - sản lượng ổn định
+    required_external_data: []
+    critical_missing_evidence:
+      - BCTC không công bố sản lượng
+    testable_with_annual_data: partial
+    sources:
+      - title: "KBSV — Báo cáo cập nhật HPG"
+        date: "16/02/2023"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - title: "DSC — Báo cáo cập nhật HPG Q1/2023"
+        date: "05/05/2023"
+        url: "https://extgw.dsc.com.vn/eback/uploads/2023/05/BaoCaoCapNhat_HPG_Q1.2023_DSC.pdf"
+      - title: "Thomas & Zhang — Inventory changes and future returns (Review of Accounting Studies)"
+        date: "2002"
+        url: "https://doi.org/10.1023/a:1020274002135"
+    extension_beyond_midterm: true
+    status: draft
+    reviewed_by: null
+
+  - id: margin_new_project_depreciation
+    code: GM-7
+    anomaly_type: gross_margin_change
+    direction: down
+    claim: Biên gộp giảm do khấu hao tăng khi dự án mới đi vào vận hành.
+    business_rationale: Tài sản mới chuyển từ XDCB dở dang sang tài sản cố định bắt đầu trích khấu hao vào giá vốn.
+    expected_quantitative_evidence:
+      - cip_transfer_to_fixed_assets* lớn
+      - depreciation* tăng
+    expected_textual_evidence: [đưa vào vận hành, hoàn thành dự án]
+    contradictory_evidence:
+      - không có dự án lớn hoàn thành trong kỳ
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources:
+      - title: "KBSV — Báo cáo cập nhật HPG"
+        date: "16/02/2023"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - title: "DSC — Báo cáo cập nhật HPG Q1/2023"
+        date: "05/05/2023"
+        url: "https://extgw.dsc.com.vn/eback/uploads/2023/05/BaoCaoCapNhat_HPG_Q1.2023_DSC.pdf"
+    extension_beyond_midterm: true
+    status: draft
+    reviewed_by: null
+
+  - id: margin_trade_policy_fx
+    code: GM-8
+    anomaly_type: gross_margin_change
+    direction: both
+    claim: Biên gộp thay đổi do biện pháp phòng vệ thương mại hoặc biến động tỷ giá.
+    business_rationale: Thuế chống bán phá giá ở thị trường xuất khẩu ép giá bán; tỷ giá ảnh hưởng giá nguyên liệu nhập khẩu.
+    expected_quantitative_evidence:
+      - tỷ trọng doanh thu xuất khẩu* đổi
+      - tỷ giá USD/VND biến động
+    expected_textual_evidence: [chống bán phá giá, thuế tự vệ, tỷ giá]
+    contradictory_evidence:
+      - không có biện pháp mới
+      - tỷ giá ổn định
+    required_external_data: [usd_vnd]
+    critical_missing_evidence:
+      - không có tỷ trọng xuất khẩu
+    testable_with_annual_data: partial
+    sources:
+      - title: "DSC — Phân tích chuỗi giá trị ngành thép Việt Nam"
+        date: "không ghi ngày"
+        url: "https://www.dsc.com.vn/kien-thuc/chuoi-gia-tri-nganh-thep"
+      - title: "Vietcap (qua Tạp chí Công Thương) — HPG: thị phần thép xây dựng cao kỷ lục, biên lợi nhuận neo cao"
+        date: "16/09/2024"
+        url: "https://tapchicongthuong.vn/tap-doan-hoa-phat--hpg-thi-phan-thep-xay-dung-len-cao-ky-luc--du-kien-bien-loi-nhuan-neo-cao-126703.htm"
+      - title: "VietnamFinance — Indonesia áp thuế chống bán phá giá tôn mạ màu, HSG và NKG chịu tác động ra sao"
+        date: "14/06/2018"
+        url: "https://vietnamfinance.vn/indonesia-ap-thue-chong-ban-pha-gia-len-ton-ma-mau-hoa-sen-va-nam-kim-chiu-tac-dong-ra-sao-d19938.html"
+      - title: "MBS — Báo cáo ngành thép (thuế 25% của Mỹ)"
+        date: "12/02/2025"
+        url: "https://mbs.com.vn/media/0wjc2vkq/thep_20250212-final.pdf"
+    extension_beyond_midterm: true
+    status: draft
+    reviewed_by: null
+
+  # ---------- Tồn kho giảm bất thường (direction: down) ----------
+
+  - id: inventory_strong_demand_drawdown
+    code: DEC-1
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho giảm do nhu cầu mạnh, bán vượt kỳ vọng.
+    business_rationale: Tồn kho giảm thường cho thấy doanh số cao hơn kỳ vọng và lợi nhuận tốt hơn (tín hiệu tồn kho của Lev & Thiagarajan).
+    expected_quantitative_evidence:
+      - net_revenue tăng
+      - finished_goods giảm
+      - số ngày tồn kho giảm
+      - (Δ tồn kho) − (Δ doanh thu) < 0
+    expected_textual_evidence: [tiêu thụ tăng, đơn hàng tăng]
+    contradictory_evidence:
+      - doanh thu giảm
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources:
+      - title: "Luchs, Maheshwari & Myring — tín hiệu tồn kho của Lev & Thiagarajan (1993)"
+        date: "không ghi ngày"
+        url: "https://w.aabri.com/manuscripts/111037.pdf"
+    source_strength: medium   # chỉ có nguồn học thuật chung
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_active_destocking
+    code: DEC-2
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho giảm do doanh nghiệp chủ động giảm tồn kho để hạn chế rủi ro giá giảm và giải phóng vốn lưu động.
+    business_rationale: Khi dự báo giá giảm, doanh nghiệp hạn chế mua mới nguyên liệu, kiểm soát số ngày tồn kho để tránh giá vốn cao và cải thiện dòng tiền.
+    expected_quantitative_evidence:
+      - raw_materials giảm mạnh
+      - inventory_change_cf* (lưu chuyển tiền tệ mã 10) dương
+      - phải trả người bán giảm
+      - doanh thu không giảm tương ứng
+    expected_textual_evidence: [tối ưu hàng tồn kho, hạn chế mua mới, kiểm soát hàng tồn kho]
+    contradictory_evidence:
+      - mức giảm nằm ở thành phẩm và doanh thu tăng mạnh (nghiêng về DEC-1)
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources:
+      - title: "KBSV — Báo cáo cập nhật HPG"
+        date: "16/02/2023"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - title: "KBSV — Báo cáo cập nhật NKG"
+        date: "24/03/2023"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_NKG_Baocaocapnhat_230323.pdf"
+      - title: "Mekong ASEAN — Hai doanh nghiệp thép báo lỗ kỷ lục do giá giảm mạnh, tồn kho cao"
+        date: "17/10/2022"
+        url: "https://mekongasean.vn/hai-doanh-nghiep-thep-bao-lo-ky-luc-do-gia-giam-manh-ton-kho-cao-22623.html"
+      - title: "Tạp chí Công Thương — Tồn kho thép xuống mức thấp nhất 2 năm"
+        date: "03/08/2023"
+        url: "https://tapchicongthuong.vn/gia-thep-hom-nay-03-8--ton-kho-thep-xuong-muc-thap-nhat-2-nam-108515.htm"
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_production_cut
+    code: DEC-3
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho giảm do cắt giảm sản xuất khi nhu cầu yếu.
+    business_rationale: Doanh nghiệp dừng lò, giảm công suất để không tích thêm hàng khi tiêu thụ chậm; sản xuất giảm nhanh hơn tiêu thụ làm tồn kho giảm.
+    expected_quantitative_evidence:
+      - raw_materials và wip giảm
+      - net_revenue giảm
+      - biên gộp giảm
+      - sản lượng giảm (báo cáo thường niên)
+    expected_textual_evidence: [dừng lò, giảm công suất, hoạt động cầm chừng]
+    contradictory_evidence:
+      - sản lượng ổn định
+    required_external_data: []
+    critical_missing_evidence:
+      - BCTC không công bố sản lượng
+    testable_with_annual_data: partial
+    sources:
+      - title: "KBSV — Báo cáo cập nhật HPG"
+        date: "16/02/2023"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - title: "Mekong ASEAN — Hai doanh nghiệp thép báo lỗ kỷ lục do giá giảm mạnh, tồn kho cao"
+        date: "17/10/2022"
+        url: "https://mekongasean.vn/hai-doanh-nghiep-thep-bao-lo-ky-luc-do-gia-giam-manh-ton-kho-cao-22623.html"
+      - title: "VnExpress — Thép giảm tồn kho"
+        date: "06/09/2012"
+        url: "https://vnexpress.net/thep-giam-ton-kho-2731202.html"
+      - title: "Báo Pháp luật (Doanh nhân) — Thị trường thép quý III/2022, doanh nghiệp giảm sản lượng"
+        date: "14/11/2022"
+        url: "https://doanhnhan.baophapluat.vn/thi-truong-thep-viet-nam-quy-iii-doanh-nghiep-kho-khan-hang-giam-san-luong-de-bao-toan-48427.html"
+      - title: "Tạp chí Công Thương — Tồn kho thép xuống mức thấp nhất 2 năm"
+        date: "03/08/2023"
+        url: "https://tapchicongthuong.vn/gia-thep-hom-nay-03-8--ton-kho-thep-xuong-muc-thap-nhat-2-nam-108515.htm"
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_price_decline_value
+    code: DEC-4
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Giá trị tồn kho giảm do giá đầu vào giảm, số lượng không đổi.
+    business_rationale: BCTC ghi tồn kho theo giá trị; giá nguyên liệu giảm làm giá trị tồn kho giảm dù lượng không đổi.
+    expected_quantitative_evidence:
+      - mức giảm giá trị tồn kho xấp xỉ mức giảm giá nguyên liệu
+    expected_textual_evidence: [số lượng tồn kho (báo cáo thường niên)]
+    contradictory_evidence:
+      - giá đầu vào tăng trong khi tồn kho giảm
+    required_external_data: [iron_ore_price, hrc_price]
+    critical_missing_evidence:
+      - BCTC không công bố số lượng tồn kho
+    testable_with_annual_data: partial
+    sources:
+      - title: "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+        date: ""
+      - title: "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép"
+        date: "05/05/2021"
+        url: "https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
+      - title: "KBSV — Báo cáo cập nhật NKG"
+        date: "24/03/2023"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_NKG_Baocaocapnhat_230323.pdf"
+    source_strength: weak
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_writedown_provision
+    code: DEC-5
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho ròng giảm do trích lập dự phòng giảm giá hàng tồn kho.
+    business_rationale: Theo VAS 02, khi giá trị thuần có thể thực hiện được thấp hơn giá gốc phải lập dự phòng, làm tồn kho ròng giảm.
+    expected_quantitative_evidence:
+      - inventory_net giảm nhiều hơn inventory_gross
+      - inventory_provision tăng
+      - inventory_provision_charge* (thuyết minh giá vốn) lớn
+    expected_textual_evidence: [trích lập dự phòng giảm giá hàng tồn kho]
+    contradictory_evidence:
+      - tồn kho gộp và ròng giảm tương đương
+      - dự phòng ổn định
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources:
+      - title: "KIS — HSG brief 3Q22"
+        date: "04/11/2022"
+        url: "https://kisvn.vn/wp-content/uploads/2022/11/HSG-brief-3Q22-vie.pdf"
+      - title: "Tạp chí Kinh tế – Tài chính — Nguyên tắc kế toán hàng tồn kho (VAS 02)"
+        date: "26/01/2026"
+        url: "https://nghiencuu.tapchikinhtetaichinh.vn/nguyen-tac-ke-toan-hang-ton-kho-va-luu-y-trong-ap-dung-tai-doanh-nghiep-142966.html"
+      - title: "Mekong ASEAN — Hai doanh nghiệp thép báo lỗ kỷ lục do giá giảm mạnh, tồn kho cao"
+        date: "17/10/2022"
+        url: "https://mekongasean.vn/hai-doanh-nghiep-thep-bao-lo-ky-luc-do-gia-giam-manh-ton-kho-cao-22623.html"
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_clearance_discount
+    code: DEC-6
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho giảm do doanh nghiệp xả hàng, bán giảm giá để giải phóng tồn kho giá cao.
+    business_rationale: Khi giá bán giảm liên tục, doanh nghiệp phải cạnh tranh đầu ra và chấp nhận biên thấp để giải phóng thành phẩm giá vốn cao.
+    expected_quantitative_evidence:
+      - finished_goods giảm
+      - biên gộp giảm cùng kỳ
+      - doanh thu không giảm tương ứng
+    expected_textual_evidence: [giảm giá bán, cạnh tranh đầu ra, giải phóng hàng tồn kho]
+    contradictory_evidence:
+      - biên gộp ổn định hoặc tăng
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources:
+      - title: "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành"
+        date: "09/02/2023"
+        url: "https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - title: "KBSV — Báo cáo cập nhật NKG"
+        date: "24/03/2023"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_NKG_Baocaocapnhat_230323.pdf"
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_goods_in_transit_timing_down
+    code: DEC-7
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho giảm do hàng mua đang đi đường giảm hoặc thời điểm nhập hàng cuối kỳ.
+    business_rationale: Lô nhập khẩu lớn chưa về trước ngày khóa sổ làm tồn kho cuối kỳ thấp tạm thời.
+    expected_quantitative_evidence:
+      - goods_in_transit* giảm và chiếm phần lớn mức giảm tồn kho
+    expected_textual_evidence: [hàng mua đang đi trên đường]
+    contradictory_evidence:
+      - hàng đi đường ổn định
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources:
+      - title: "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành"
+        date: "09/02/2023"
+        url: "https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - title: "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép"
+        date: "05/05/2021"
+        url: "https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
+    extension_beyond_midterm: true
+    status: draft
+    reviewed_by: null

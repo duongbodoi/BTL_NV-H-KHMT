@@ -252,7 +252,7 @@ def test_findings_exist_for_every_library_check_nothing_added_or_dropped():
 
 
 def test_no_results_at_all_is_unverified_for_every_library_hypothesis():
-    for h in load_library().drafts:
+    for h in load_library().reviewed:
         assert verify_hypothesis(h).status is U, h.id
 
 
@@ -497,14 +497,14 @@ def test_analyze_refuses_drafts_unless_explicitly_allowed():
     assert a.verdicts[0].status is S
 
 
-def test_real_draft_library_runs_end_to_end_without_text_and_never_overclaims():
+def test_real_library_runs_end_to_end_without_text_and_never_overclaims():
     facts = facts_for("AAA", "net_revenue", {2021: 200, 2022: 220}) + INV
     a = analyze_anomaly(
-        anomaly(), load_library().drafts, quant_ctx=ctx(facts), text_fn=None, allow_draft=True
+        anomaly(), load_library().reviewed, quant_ctx=ctx(facts), text_fn=None, allow_draft=True
     )
     assert a.verdicts and all(v.rank is not None for v in a.verdicts)
     for v in a.verdicts:
-        h = next(x for x in load_library().drafts if x.id == v.hypothesis_id)
+        h = next(x for x in load_library().reviewed if x.id == v.hypothesis_id)
         if v.status is S:  # SUPPORTED chỉ khi mọi check critical-support là định lượng và đã PASS
             assert all(
                 c.kind == "quant"

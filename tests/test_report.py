@@ -493,6 +493,69 @@ def test_causal_wording_allowed_for_supported_or_hedged_claims():
     assert run_check(i, claims).accepted
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Giả thuyết biên lợi nhuận gộp giảm do khấu hao tăng được xem xét.",
+        "Các giả thuyết gồm biên gộp giảm do khấu hao và do giá bán.",
+        "GM-7 cho rằng biên lợi nhuận gộp giảm do khấu hao tăng.",
+    ],
+)
+def test_restating_a_hypothesis_is_not_a_causal_claim(text):
+    """Chạy thật 2026-10-25: LLM nhắc lại nội dung giả thuyết ("tăng do...") bị bắt oan."""
+    i = inp()
+    claims = good_claims(i)
+    claims[0]["text"] = text
+    assert run_check(i, claims).accepted
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Giả thuyết GM-7 được xem xét. Biên lợi nhuận gộp giảm do khấu hao tăng.",
+        "Theo giả thuyết GM-7: biên lợi nhuận gộp giảm do khấu hao tăng.",
+        "Biên lợi nhuận gộp giảm do khấu hao tăng, phù hợp giả thuyết GM-7.",
+    ],
+)
+def test_attribution_only_covers_its_own_clause(text):
+    i = inp()
+    claims = good_claims(i)
+    claims[0]["text"] = text
+    assert "unhedged_causal" in kinds(run_check(i, claims))
+
+
+def test_direction_is_not_checked_for_levels_and_respects_negation():
+    """Chạy thật 2026-10-25: "giảm xuống 11,5%" (mức) và "không giảm, tăng 31,7%" bị bắt oan."""
+    i = inp()
+    claims = good_claims(i)
+    n_cost, n_cogs = num_id(i, "cost_up: value"), num_id(i, "cogs (AAA")
+    claims[4]["sources"] = [n_cost, n_cogs, *claims[4]["sources"][1:]]
+    claims[4]["text"] = "Giá vốn không giảm mà tăng 25,4%, giảm xuống mức 121.234,5 tỷ đồng."
+    assert "numeric_mismatch" not in kinds(run_check(i, claims))
+    # phủ định nằm ngoài cửa sổ 30 ký tự trước số
+    claims[4]["text"] = "Giá vốn không giảm với mức độ thay đổi tính ra 25,4%."
+    assert "numeric_mismatch" not in kinds(run_check(i, claims))
+    # số đứng sau "từ/xuống" là mức, kể cả khi là chỉ báo
+    claims[0]["text"] = "Biên lợi nhuận gộp giảm xuống 11,9%, thay đổi -15,6 điểm %."
+    claims[0]["sources"] = [
+        num_id(i, "thay đổi biên lợi nhuận gộp"),
+        next(n.id for n in i.numbers if n.label == "biên lợi nhuận gộp"),
+    ]
+    assert "numeric_mismatch" not in kinds(run_check(i, claims))
+    # chiều sai của một THAY ĐỔI vẫn bị bắt, kể cả khi có phủ định ở chỗ khác
+    claims[4]["text"] = "Giá vốn không giảm nhiều; giá vốn giảm 25,4%."
+    assert "numeric_mismatch" in kinds(run_check(i, claims))
+
+
+def test_fraud_filter_does_not_match_inside_a_longer_word():
+    i = inp()
+    claims = good_claims(i)
+    claims[3]["text"] = "Thuyết minh nêu giá bán giảm 11%, giá thấp làm giảm doanh thu."
+    assert "forbidden_fraud" not in kinds(run_check(i, claims))
+    claims[3]["text"] = "Thuyết minh nêu giá bán giảm 11%, công ty làm giả số liệu."
+    assert "forbidden_fraud" in kinds(run_check(i, claims))
+
+
 def test_exempt_tokens_are_not_numbers():
     i = inp()
     claims = good_claims(i)

@@ -76,13 +76,12 @@ def test_valid_reviewed_hypothesis_has_no_errors():
     assert errors(REVIEWED) == []
 
 
-def test_repo_config_and_library_load_and_only_drafts_so_far():
-    lib = load_library()
-    assert lib.reviewed == ()  # nội dung thư viện do nhóm soạn; Claude chỉ để bản nháp
-    assert lib.drafts and all(h.status == "draft" for h in lib.drafts)
+def test_repo_config_and_library_load_and_cover_every_type():
+    lib = load_library()  # nhóm duyệt 2026-10-25: mọi giả thuyết `reviewed`
+    assert lib.reviewed and all(h.status == "reviewed" for h in lib.reviewed)
     cov = lib.coverage()
     assert set(cov) == set(load_config("anomaly")["anomaly_types"])
-    assert all(c["missing"] == S.min_reviewed_per_type for c in cov.values())
+    assert all(c["missing"] == 0 for c in cov.values())
 
 
 @pytest.mark.parametrize(
@@ -268,10 +267,15 @@ def test_hypothesis_contract_rejects_bad_status():
 
 
 def test_repo_library_has_no_company_names():
+    """Như validator: nội dung giả thuyết không nêu công ty; `sources` được phép (trích dẫn)."""
     names = [c.lower() for c in load_config("dataset")["companies"]]
     for p in REPO_LIBRARY.glob("*.yaml"):
-        text = p.read_text(encoding="utf-8").lower()
-        assert not any(n in text for n in names), p.name
+        raw = yaml.safe_load(p.read_text(encoding="utf-8"))
+        items = raw["hypotheses"] if set(raw) == {"hypotheses"} else [raw]
+        for h in items:
+            body = {k: v for k, v in h.items() if k != "sources"}
+            text = yaml.safe_dump(body, allow_unicode=True).lower()
+            assert not any(n in text for n in names), (p.name, h.get("id"))
 
 
 # ---------------- vòng review độc lập
@@ -344,14 +348,14 @@ def test_sources_must_be_more_than_a_placeholder():
     assert any("source" in e for e in errors(make(sources=["x"])))
 
 
-def test_repo_library_is_the_teams_draft_and_none_is_reviewed_yet():
+def test_repo_library_is_reviewed_by_the_team():
     lib = load_library()
-    assert lib.reviewed == ()
-    by_type = {t: [h for h in lib.drafts if h.anomaly_type == t] for t in S.anomaly_types}
+    assert lib.drafts == ()
+    by_type = {t: [h for h in lib.reviewed if h.anomaly_type == t] for t in S.anomaly_types}
     assert all(len(v) >= 6 for v in by_type.values())
-    assert all(h.status == "draft" and h.reviewed_by is None for h in lib.drafts)
-    assert all(h.code for h in lib.drafts)
-    inv4 = next(h for h in lib.drafts if h.code == "INV-4")
+    assert all(h.reviewed_by and h.sources and h.critical_missing_evidence for h in lib.reviewed)
+    assert all(h.code for h in lib.reviewed)
+    inv4 = next(h for h in lib.reviewed if h.code == "INV-4")
     assert inv4.testable_with_annual_data == "no"  # YAML `no` (bool) được chuẩn hóa
 
 
@@ -404,9 +408,9 @@ def test_optional_metadata_is_type_checked(changes):
     assert errors(make(**changes)) != []
 
 
-def test_every_team_draft_has_checks_and_would_pass_review_once_signed_off():
-    """Chỉ còn thiếu việc của người: nguồn, người duyệt, critical_missing_evidence của 2 ca rỗng."""
-    for h in load_library().drafts:
+def test_every_reviewed_hypothesis_has_support_and_contradict_checks():
+    """Validator đã kiểm khi tải; giữ test này để lỗi chỉ rõ giả thuyết nào."""
+    for h in load_library().reviewed:
         assert any(c.importance == "critical" and c.polarity == "support" for c in h.checks), h.id
         assert any(c.polarity == "contradict" for c in h.checks), h.id
         raw = h.to_dict()
@@ -434,6 +438,6 @@ def test_direction_is_validated_and_required_for_reviewed():
 
 def test_team_library_declares_a_direction_and_covers_both_directions_of_inventory():
     lib = load_library()
-    assert all(h.direction in ("up", "down", "both") for h in lib.drafts)
-    inv = [h for h in lib.drafts if h.anomaly_type == "inventory_increase"]
+    assert all(h.direction in ("up", "down", "both") for h in lib.reviewed)
+    inv = [h for h in lib.reviewed if h.anomaly_type == "inventory_increase"]
     assert {h.direction for h in inv} >= {"up", "down"} and len(inv) >= 12

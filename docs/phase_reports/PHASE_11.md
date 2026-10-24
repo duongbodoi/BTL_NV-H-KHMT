@@ -76,3 +76,16 @@ Không. Không có tên công ty, năm, trang cố định trong code; tên ch�
 ## 9. Khác báo cáo giữa kỳ
 
 Không có điểm mới khác giữa kỳ: LLM vẫn chỉ viết lại kết quả đã xác thực ở bước 4. Việc LLM trả khẳng định có cấu trúc (thay vì văn bản tự do) là chi tiết triển khai của ràng buộc spec mục 13, không đổi phạm vi.
+
+## Bổ sung 2026-10-25: chạy thật bằng Gemini, sửa bộ lọc bắt oan
+
+Lần chạy thật đầu tiên (11 ca, `gemini-3.5-flash-lite`, run1): 8/11 bị từ chối sau 3 lần. Kiểm lại từng vi phạm:
+
+- `unhedged_causal` 40 lần, **~38 là bắt oan**: LLM nhắc lại nội dung giả thuyết ("Giả thuyết tồn kho tăng **do** mùa vụ … UNVERIFIED"), bộ lọc coi "tăng … do" là khẳng định nhân quả. Sửa: thêm `attribution` trong `configs/report.yaml` (`giả thuyết`, `cho rằng`); mẫu nhân quả nằm sau cụm này trong cùng câu/vế (ngăn bởi `. ; : ! ?`) không tính. Vế sau dấu câu vẫn bị kiểm. 2 lỗi còn lại ("…, dẫn đến chênh lệch …") giữ nguyên.
+- `forbidden_fraud` 2 lần, **bắt oan**: mẫu `làm giả` khớp trong "làm **giả**m". Sửa thành `\blàm giả\b`.
+- Còn lại là lỗi thật của LLM: khẳng định không dẫn nguồn (bị loại, không chặn), số tự tính không có trong nguồn (ví dụ tăng trưởng doanh thu 17,4%), nêu trạng thái mà không dẫn mã H, thiếu mục missing cho giả thuyết PARTIAL.
+- Còn nghi bắt oan, CHƯA sửa (nhóm quyết): "chưa đủ bằng chứng kết luận chắc chắn" bị `forbidden_certainty` vì "chưa" cách hơn 3 từ; "Nếu … được xác thực" bị coi là nêu trạng thái SUPPORTED.
+- Test: 7 test mới (thuật lại giả thuyết được qua; vế khác vẫn bị bắt; `làm giảm` ≠ `làm giả`).
+- **Kiểm số bắt oan (run2, sửa thêm):** (1) chiều tăng/giảm bị áp cho số đầu vào là MỨC ("biên gộp giảm xuống 11,5%") → chỉ kiểm chiều cho số không phải `input`; (2) "không giảm … 31,7%" bị hiểu là "giảm" (phủ định nằm ngoài cửa sổ 30 ký tự) → nhìn thêm 12 ký tự trước từ chỉ chiều; (3) "giảm từ 132,7 ngày xuống 63,0" → số ngay sau `từ|xuống|lên|còn|mức` là mức, không kiểm chiều. 1 test mới.
+- **Kết quả:** run1 3/11 chấp nhận → run2 10/11 → sau khi sửa kiểm số 11/11 (HSG FY2018 lấy lại bản nháp đã cache). run2: 21 lời gọi, 72.482/28.459 token. Lỗi thật còn lại của Flash-Lite: khẳng định không dẫn nguồn (22, bị loại), số tự tính hoặc dẫn sai nguồn, nêu hạng/trạng thái không dẫn mã H, thiếu mục missing cho PARTIAL.
+- **Bộ kiểm chỉ bắt được số/nguồn/trạng thái/từ cấm.** Câu sai nghĩa mà số vẫn khớp nguồn (ví dụ nhầm "tỷ trọng trong mức tăng" với "tỷ trọng trong tồn kho") vẫn lọt; người phải đọc.

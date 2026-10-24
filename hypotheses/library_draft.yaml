@@ -1,5 +1,5 @@
-# Thư viện giả thuyết — BẢN NHÁP. Xem HYPOTHESIS_LIBRARY_DRAFT.md cho danh mục nguồn S0–S16.
-# Chưa có giả thuyết nào được duyệt: status: draft, reviewed_by: null.
+# Thư viện giả thuyết. Nguồn ghi đầy đủ (tên, ngày, link) theo library_draft_update.yaml của nhóm (2026-10-25).
+# Đã duyệt: 22 giả thuyết, reviewed_by: Nguyễn Tùng Dương (nhóm xác nhận 2026-10-25).
 # Trường `checks` (dạng có cấu trúc) sẽ được thêm ở Phase 6 theo spec mục 10.1.
 # Metric có hậu tố "*" là chỉ tiêu Phase 3 chưa trích, cần bổ sung.
 # direction: up | down | both. anomaly_type giữ tên khóa trong code (inventory_increase xét hai chiều).
@@ -23,7 +23,11 @@ hypotheses:
     critical_missing_evidence:
       - không có giá đầu vào tại thời điểm cuối kỳ
     testable_with_annual_data: partial
-    sources: [S0, S1, S8, S9]
+    sources:
+      - "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+      - "Tạp chí Công Thương — Tồn kho các doanh nghiệp trước bối cảnh giá thép tăng cao (24/02/2019) https://tapchicongthuong.vn/ton-kho-cac-doanh-nghiep-truoc-boi-canh-gia-thep-tang-cao-60518.htm"
+      - "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép (05/05/2021) https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
+      - "VCSC, VNDirect (qua VietnamFinance) — Doanh nghiệp thép: áp lực sau giai đoạn thăng hoa (27/02/2022) https://vietnamfinance.vn/doanh-nghiep-thep-ap-luc-sau-giai-doan-thang-hoa-d77178.html"
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: raw_materials_main_driver
         kind: quant
@@ -84,7 +88,7 @@ hypotheses:
         - tích trữ
         - giá nguyên liệu thấp
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_capacity_expansion
     code: INV-2
@@ -104,7 +108,10 @@ hypotheses:
     critical_missing_evidence:
       - không có bằng chứng nối trực tiếp mở rộng công suất với mức tăng tồn kho
     testable_with_annual_data: yes
-    sources: [S0, S5, S7]
+    sources:
+      - "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+      - "KBSV — Báo cáo cập nhật HPG (16/02/2023) https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - "DSC — Báo cáo cập nhật HPG Q1/2023 (05/05/2023) https://extgw.dsc.com.vn/eback/uploads/2023/05/BaoCaoCapNhat_HPG_Q1.2023_DSC.pdf"
     source_strength: weak   # chưa có nguồn ngoài nối trực tiếp cơ chế
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: capex_up
@@ -176,7 +183,7 @@ hypotheses:
         - dự án bị hoãn
         - dừng dự án
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_weak_demand
     code: INV-3
@@ -197,7 +204,12 @@ hypotheses:
     critical_missing_evidence:
       - không tách được thành phần tồn kho (thuyết minh thiếu)
     testable_with_annual_data: yes
-    sources: [S0, S3, S6, S15, S16]
+    sources:
+      - "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+      - "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành (09/02/2023) https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - "KIS — HSG brief 3Q22 (04/11/2022) https://kisvn.vn/wp-content/uploads/2022/11/HSG-brief-3Q22-vie.pdf"
+      - "Thomas & Zhang — Inventory changes and future returns (Review of Accounting Studies) (2002) https://doi.org/10.1023/a:1020274002135"
+      - "Luchs, Maheshwari & Myring — tín hiệu tồn kho của Lev & Thiagarajan (1993) (không ghi ngày) https://w.aabri.com/manuscripts/111037.pdf"
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: inventory_outpaces_revenue
         kind: quant
@@ -275,7 +287,7 @@ hypotheses:
         - sức mua giảm
         - trích lập dự phòng
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_seasonality
     code: INV-4
@@ -292,7 +304,9 @@ hypotheses:
     critical_missing_evidence:
       - không có dữ liệu theo quý
     testable_with_annual_data: no   # dự kiến UNVERIFIED, phân tích ở RQ3
-    sources: [S0, S13]
+    sources:
+      - "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+      - "Elibook — HPG: sản lượng tháng 6 giảm nhẹ do chu kỳ mùa mưa (18/07/2024) https://elibook.vn/2024/07/18/hpg-san-luong-thep-tieu-thu-thang-6-giam-nhe-do-chu-ky-mua-mua-loi-nhuan-quy-2-gan-3500-ty/"
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: seasonal_text
         kind: text
@@ -309,7 +323,7 @@ hypotheses:
         queries:
         - tồn kho không mang tính mùa vụ
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_price_not_volume
     code: INV-5
@@ -327,7 +341,10 @@ hypotheses:
     critical_missing_evidence:
       - BCTC không công bố số lượng tồn kho
     testable_with_annual_data: partial
-    sources: [S0, S8, S9]
+    sources:
+      - "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+      - "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép (05/05/2021) https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
+      - "VCSC, VNDirect (qua VietnamFinance) — Doanh nghiệp thép: áp lực sau giai đoạn thăng hoa (27/02/2022) https://vietnamfinance.vn/doanh-nghiep-thep-ap-luc-sau-giai-doan-thang-hoa-d77178.html"
     source_strength: weak   # S8, S9 chỉ hỗ trợ gián tiếp
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: inventory_growth_tracks_input_price
@@ -371,7 +388,7 @@ hypotheses:
         queries:
         - số lượng tồn kho tăng
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_accounting_policy_change
     code: INV-6
@@ -388,7 +405,9 @@ hypotheses:
     critical_missing_evidence:
       - không trích được đoạn chính sách kế toán của một trong hai năm
     testable_with_annual_data: yes
-    sources: [S0, S14]
+    sources:
+      - "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+      - "Tạp chí Kinh tế – Tài chính — Nguyên tắc kế toán hàng tồn kho (VAS 02) (26/01/2026) https://nghiencuu.tapchikinhtetaichinh.vn/nguyen-tac-ke-toan-hang-ton-kho-va-luu-y-trong-ap-dung-tai-doanh-nghiep-142966.html"
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: policy_change_text
         kind: text
@@ -406,7 +425,7 @@ hypotheses:
         queries:
         - chính sách hàng tồn kho nhất quán với năm trước
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_goods_in_transit_timing
     code: INV-7
@@ -421,9 +440,12 @@ hypotheses:
     contradictory_evidence:
       - hàng đi đường ổn định
     required_external_data: []
-    critical_missing_evidence: []
+    critical_missing_evidence:
+      - "không có số dư hàng mua đang đi đường trong thuyết minh tồn kho"
     testable_with_annual_data: yes
-    sources: [S3, S8]
+    sources:
+      - "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành (09/02/2023) https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép (05/05/2021) https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
     extension_beyond_midterm: true
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: goods_in_transit_main_driver
@@ -467,7 +489,7 @@ hypotheses:
           value: 0.05
           abs: true
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: margin_selling_price
     code: GM-1
@@ -484,7 +506,10 @@ hypotheses:
     critical_missing_evidence:
       - không có giá bán bình quân của doanh nghiệp
     testable_with_annual_data: partial
-    sources: [S2, S5, S10]
+    sources:
+      - "DSC — Phân tích chuỗi giá trị ngành thép Việt Nam (không ghi ngày) https://www.dsc.com.vn/kien-thuc/chuoi-gia-tri-nganh-thep"
+      - "KBSV — Báo cáo cập nhật HPG (16/02/2023) https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - "Vietcap (qua Tạp chí Công Thương) — HPG: thị phần thép xây dựng cao kỷ lục, biên lợi nhuận neo cao (16/09/2024) https://tapchicongthuong.vn/tap-doan-hoa-phat--hpg-thi-phan-thep-xay-dung-len-cao-ky-luc--du-kien-bien-loi-nhuan-neo-cao-126703.htm"
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: steel_price_same_direction
         kind: quant
@@ -536,7 +561,7 @@ hypotheses:
         - giá bán
         - điều chỉnh giá bán
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: margin_input_cost_lag
     code: GM-2
@@ -554,7 +579,11 @@ hypotheses:
     critical_missing_evidence:
       - không có chuỗi giá đầu vào phù hợp với loại doanh nghiệp
     testable_with_annual_data: partial
-    sources: [S2, S4, S5, S10]
+    sources:
+      - "DSC — Phân tích chuỗi giá trị ngành thép Việt Nam (không ghi ngày) https://www.dsc.com.vn/kien-thuc/chuoi-gia-tri-nganh-thep"
+      - "BVSC (qua Tạp chí Công Thương) — Biên lợi nhuận NKG và HSG cải thiện quý 2/2023 (11/07/2023) https://tapchicongthuong.vn/bvsc--bien-loi-nhuan-cua-thep-nam-kim-va-tap-doan-hoa-sen-duoc-cai-thien-trong-quy-2-2023-107336.htm"
+      - "KBSV — Báo cáo cập nhật HPG (16/02/2023) https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - "Vietcap (qua Tạp chí Công Thương) — HPG: thị phần thép xây dựng cao kỷ lục, biên lợi nhuận neo cao (16/09/2024) https://tapchicongthuong.vn/tap-doan-hoa-phat--hpg-thi-phan-thep-xay-dung-len-cao-ky-luc--du-kien-bien-loi-nhuan-neo-cao-126703.htm"
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: input_price_opposite_direction
         kind: quant
@@ -608,7 +637,7 @@ hypotheses:
         - giá nguyên liệu
         - chi phí đầu vào
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: margin_inventory_cost_effect
     code: GM-3
@@ -628,7 +657,12 @@ hypotheses:
     critical_missing_evidence:
       - không có giá đầu vào trong kỳ
     testable_with_annual_data: partial
-    sources: [S3, S6, S7, S8, S9]
+    sources:
+      - "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành (09/02/2023) https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - "KIS — HSG brief 3Q22 (04/11/2022) https://kisvn.vn/wp-content/uploads/2022/11/HSG-brief-3Q22-vie.pdf"
+      - "DSC — Báo cáo cập nhật HPG Q1/2023 (05/05/2023) https://extgw.dsc.com.vn/eback/uploads/2023/05/BaoCaoCapNhat_HPG_Q1.2023_DSC.pdf"
+      - "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép (05/05/2021) https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
+      - "VCSC, VNDirect (qua VietnamFinance) — Doanh nghiệp thép: áp lực sau giai đoạn thăng hoa (27/02/2022) https://vietnamfinance.vn/doanh-nghiep-thep-ap-luc-sau-giai-doan-thang-hoa-d77178.html"
     extension_beyond_midterm: true
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: opening_inventory_large
@@ -693,7 +727,7 @@ hypotheses:
         - giá vốn cao
         - nguyên liệu giá rẻ
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: margin_inventory_provision
     code: GM-4
@@ -711,7 +745,11 @@ hypotheses:
     critical_missing_evidence:
       - thuyết minh giá vốn không tách dòng dự phòng
     testable_with_annual_data: yes
-    sources: [S4, S5, S6, S14]
+    sources:
+      - "BVSC (qua Tạp chí Công Thương) — Biên lợi nhuận NKG và HSG cải thiện quý 2/2023 (11/07/2023) https://tapchicongthuong.vn/bvsc--bien-loi-nhuan-cua-thep-nam-kim-va-tap-doan-hoa-sen-duoc-cai-thien-trong-quy-2-2023-107336.htm"
+      - "KBSV — Báo cáo cập nhật HPG (16/02/2023) https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - "KIS — HSG brief 3Q22 (04/11/2022) https://kisvn.vn/wp-content/uploads/2022/11/HSG-brief-3Q22-vie.pdf"
+      - "Tạp chí Kinh tế – Tài chính — Nguyên tắc kế toán hàng tồn kho (VAS 02) (26/01/2026) https://nghiencuu.tapchikinhtetaichinh.vn/nguyen-tac-ke-toan-hang-ton-kho-va-luu-y-trong-ap-dung-tai-doanh-nghiep-142966.html"
     extension_beyond_midterm: true
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: provision_moves
@@ -756,7 +794,7 @@ hypotheses:
         - trích lập dự phòng
         - hoàn nhập dự phòng
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: margin_product_market_mix
     code: GM-5
@@ -773,7 +811,10 @@ hypotheses:
     critical_missing_evidence:
       - thuyết minh không tách doanh thu theo sản phẩm hoặc thị trường
     testable_with_annual_data: partial
-    sources: [S2, S3, S10]
+    sources:
+      - "DSC — Phân tích chuỗi giá trị ngành thép Việt Nam (không ghi ngày) https://www.dsc.com.vn/kien-thuc/chuoi-gia-tri-nganh-thep"
+      - "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành (09/02/2023) https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - "Vietcap (qua Tạp chí Công Thương) — HPG: thị phần thép xây dựng cao kỷ lục, biên lợi nhuận neo cao (16/09/2024) https://tapchicongthuong.vn/tap-doan-hoa-phat--hpg-thi-phan-thep-xay-dung-len-cao-ky-luc--du-kien-bien-loi-nhuan-neo-cao-126703.htm"
     extension_beyond_midterm: true
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: segment_revenue_shift
@@ -802,7 +843,7 @@ hypotheses:
         queries:
         - cơ cấu sản phẩm không thay đổi đáng kể
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: margin_capacity_utilization
     code: GM-6
@@ -820,7 +861,10 @@ hypotheses:
     critical_missing_evidence:
       - BCTC không công bố sản lượng
     testable_with_annual_data: partial
-    sources: [S5, S7, S15]
+    sources:
+      - "KBSV — Báo cáo cập nhật HPG (16/02/2023) https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - "DSC — Báo cáo cập nhật HPG Q1/2023 (05/05/2023) https://extgw.dsc.com.vn/eback/uploads/2023/05/BaoCaoCapNhat_HPG_Q1.2023_DSC.pdf"
+      - "Thomas & Zhang — Inventory changes and future returns (Review of Accounting Studies) (2002) https://doi.org/10.1023/a:1020274002135"
     extension_beyond_midterm: true
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: production_volume_change
@@ -865,7 +909,7 @@ hypotheses:
           value: 0.03
           abs: true
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: margin_new_project_depreciation
     code: GM-7
@@ -880,9 +924,12 @@ hypotheses:
     contradictory_evidence:
       - không có dự án lớn hoàn thành trong kỳ
     required_external_data: []
-    critical_missing_evidence: []
+    critical_missing_evidence:
+      - "không có số khấu hao hoặc giá trị dự án chuyển từ XDCB dở dang sang tài sản cố định trong kỳ"
     testable_with_annual_data: yes
-    sources: [S5, S7]
+    sources:
+      - "KBSV — Báo cáo cập nhật HPG (16/02/2023) https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - "DSC — Báo cáo cập nhật HPG Q1/2023 (05/05/2023) https://extgw.dsc.com.vn/eback/uploads/2023/05/BaoCaoCapNhat_HPG_Q1.2023_DSC.pdf"
     extension_beyond_midterm: true
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: cip_transfer_large
@@ -933,7 +980,7 @@ hypotheses:
         queries:
         - không có dự án lớn hoàn thành trong kỳ
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: margin_trade_policy_fx
     code: GM-8
@@ -952,7 +999,11 @@ hypotheses:
     critical_missing_evidence:
       - không có tỷ trọng xuất khẩu
     testable_with_annual_data: partial
-    sources: [S2, S10, S11, S12]
+    sources:
+      - "DSC — Phân tích chuỗi giá trị ngành thép Việt Nam (không ghi ngày) https://www.dsc.com.vn/kien-thuc/chuoi-gia-tri-nganh-thep"
+      - "Vietcap (qua Tạp chí Công Thương) — HPG: thị phần thép xây dựng cao kỷ lục, biên lợi nhuận neo cao (16/09/2024) https://tapchicongthuong.vn/tap-doan-hoa-phat--hpg-thi-phan-thep-xay-dung-len-cao-ky-luc--du-kien-bien-loi-nhuan-neo-cao-126703.htm"
+      - "VietnamFinance — Indonesia áp thuế chống bán phá giá tôn mạ màu, HSG và NKG chịu tác động ra sao (14/06/2018) https://vietnamfinance.vn/indonesia-ap-thue-chong-ban-pha-gia-len-ton-ma-mau-hoa-sen-va-nam-kim-chiu-tac-dong-ra-sao-d19938.html"
+      - "MBS — Báo cáo ngành thép (thuế 25% của Mỹ) (12/02/2025) https://mbs.com.vn/media/0wjc2vkq/thep_20250212-final.pdf"
     extension_beyond_midterm: true
     checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: usd_vnd_moved
@@ -1007,7 +1058,7 @@ hypotheses:
         queries:
         - không có biện pháp phòng vệ thương mại mới
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   # ---------- Tồn kho giảm bất thường (direction: down) ----------
 
@@ -1026,9 +1077,11 @@ hypotheses:
     contradictory_evidence:
       - doanh thu giảm
     required_external_data: []
-    critical_missing_evidence: []
+    critical_missing_evidence:
+      - "không có cơ cấu tồn kho (thành phẩm) đầu kỳ và cuối kỳ"
     testable_with_annual_data: yes
-    sources: [S16]
+    sources:
+      - "Luchs, Maheshwari & Myring — tín hiệu tồn kho của Lev & Thiagarajan (1993) (không ghi ngày) https://w.aabri.com/manuscripts/111037.pdf"
     source_strength: medium   # chỉ có nguồn học thuật chung
     checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
       - id: revenue_up
@@ -1089,7 +1142,7 @@ hypotheses:
         - tiêu thụ tăng
         - đơn hàng tăng
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_active_destocking
     code: DEC-2
@@ -1106,9 +1159,14 @@ hypotheses:
     contradictory_evidence:
       - mức giảm nằm ở thành phẩm và doanh thu tăng mạnh (nghiêng về DEC-1)
     required_external_data: []
-    critical_missing_evidence: []
+    critical_missing_evidence:
+      - "không có cơ cấu tồn kho (nguyên vật liệu) hoặc biến động tồn kho trên lưu chuyển tiền tệ"
     testable_with_annual_data: yes
-    sources: [S5, S17, S18, S22]
+    sources:
+      - "KBSV — Báo cáo cập nhật HPG (16/02/2023) https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - "KBSV — Báo cáo cập nhật NKG (24/03/2023) https://www.kbsec.com.vn/pic/Service/KBSV_NKG_Baocaocapnhat_230323.pdf"
+      - "Mekong ASEAN — Hai doanh nghiệp thép báo lỗ kỷ lục do giá giảm mạnh, tồn kho cao (17/10/2022) https://mekongasean.vn/hai-doanh-nghiep-thep-bao-lo-ky-luc-do-gia-giam-manh-ton-kho-cao-22623.html"
+      - "Tạp chí Công Thương — Tồn kho thép xuống mức thấp nhất 2 năm (03/08/2023) https://tapchicongthuong.vn/gia-thep-hom-nay-03-8--ton-kho-thep-xuong-muc-thap-nhat-2-nam-108515.htm"
     checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
       - id: raw_materials_down
         kind: quant
@@ -1180,7 +1238,7 @@ hypotheses:
         - hạn chế mua mới
         - kiểm soát hàng tồn kho
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_production_cut
     code: DEC-3
@@ -1200,7 +1258,12 @@ hypotheses:
     critical_missing_evidence:
       - BCTC không công bố sản lượng
     testable_with_annual_data: partial
-    sources: [S5, S18, S20, S21, S22]
+    sources:
+      - "KBSV — Báo cáo cập nhật HPG (16/02/2023) https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+      - "Mekong ASEAN — Hai doanh nghiệp thép báo lỗ kỷ lục do giá giảm mạnh, tồn kho cao (17/10/2022) https://mekongasean.vn/hai-doanh-nghiep-thep-bao-lo-ky-luc-do-gia-giam-manh-ton-kho-cao-22623.html"
+      - "VnExpress — Thép giảm tồn kho (06/09/2012) https://vnexpress.net/thep-giam-ton-kho-2731202.html"
+      - "Báo Pháp luật (Doanh nhân) — Thị trường thép quý III/2022, doanh nghiệp giảm sản lượng (14/11/2022) https://doanhnhan.baophapluat.vn/thi-truong-thep-viet-nam-quy-iii-doanh-nghiep-kho-khan-hang-giam-san-luong-de-bao-toan-48427.html"
+      - "Tạp chí Công Thương — Tồn kho thép xuống mức thấp nhất 2 năm (03/08/2023) https://tapchicongthuong.vn/gia-thep-hom-nay-03-8--ton-kho-thep-xuong-muc-thap-nhat-2-nam-108515.htm"
     checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
       - id: production_volume_down
         kind: quant
@@ -1272,7 +1335,7 @@ hypotheses:
           value: 0.03
           abs: true
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_price_decline_value
     code: DEC-4
@@ -1289,7 +1352,10 @@ hypotheses:
     critical_missing_evidence:
       - BCTC không công bố số lượng tồn kho
     testable_with_annual_data: partial
-    sources: [S0, S8, S17]
+    sources:
+      - "Báo cáo giữa kỳ nhóm 8, mục 2.2"
+      - "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép (05/05/2021) https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
+      - "KBSV — Báo cáo cập nhật NKG (24/03/2023) https://www.kbsec.com.vn/pic/Service/KBSV_NKG_Baocaocapnhat_230323.pdf"
     source_strength: weak
     checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
       - id: inventory_growth_tracks_input_price
@@ -1339,7 +1405,7 @@ hypotheses:
         - số lượng tồn kho
         - sản lượng tồn kho
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_writedown_provision
     code: DEC-5
@@ -1356,9 +1422,13 @@ hypotheses:
       - tồn kho gộp và ròng giảm tương đương
       - dự phòng ổn định
     required_external_data: []
-    critical_missing_evidence: []
+    critical_missing_evidence:
+      - "không có số dư dự phòng giảm giá hàng tồn kho đầu kỳ và cuối kỳ"
     testable_with_annual_data: yes
-    sources: [S6, S14, S18]
+    sources:
+      - "KIS — HSG brief 3Q22 (04/11/2022) https://kisvn.vn/wp-content/uploads/2022/11/HSG-brief-3Q22-vie.pdf"
+      - "Tạp chí Kinh tế – Tài chính — Nguyên tắc kế toán hàng tồn kho (VAS 02) (26/01/2026) https://nghiencuu.tapchikinhtetaichinh.vn/nguyen-tac-ke-toan-hang-ton-kho-va-luu-y-trong-ap-dung-tai-doanh-nghiep-142966.html"
+      - "Mekong ASEAN — Hai doanh nghiệp thép báo lỗ kỷ lục do giá giảm mạnh, tồn kho cao (17/10/2022) https://mekongasean.vn/hai-doanh-nghiep-thep-bao-lo-ky-luc-do-gia-giam-manh-ton-kho-cao-22623.html"
     checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
       - id: net_falls_more_than_gross
         kind: quant
@@ -1423,7 +1493,7 @@ hypotheses:
         queries:
         - trích lập dự phòng giảm giá hàng tồn kho
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_clearance_discount
     code: DEC-6
@@ -1439,9 +1509,12 @@ hypotheses:
     contradictory_evidence:
       - biên gộp ổn định hoặc tăng
     required_external_data: []
-    critical_missing_evidence: []
+    critical_missing_evidence:
+      - "không có số dư thành phẩm hoặc biên gộp cùng kỳ"
     testable_with_annual_data: yes
-    sources: [S3, S17]
+    sources:
+      - "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành (09/02/2023) https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - "KBSV — Báo cáo cập nhật NKG (24/03/2023) https://www.kbsec.com.vn/pic/Service/KBSV_NKG_Baocaocapnhat_230323.pdf"
     checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
       - id: finished_goods_down
         kind: quant
@@ -1492,7 +1565,7 @@ hypotheses:
         - cạnh tranh đầu ra
         - giải phóng hàng tồn kho
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương
 
   - id: inventory_goods_in_transit_timing_down
     code: DEC-7
@@ -1506,9 +1579,12 @@ hypotheses:
     contradictory_evidence:
       - hàng đi đường ổn định
     required_external_data: []
-    critical_missing_evidence: []
+    critical_missing_evidence:
+      - "không có số dư hàng mua đang đi đường trong thuyết minh tồn kho"
     testable_with_annual_data: yes
-    sources: [S3, S8]
+    sources:
+      - "VDSC (qua Mekong ASEAN) — Hoa Sen gặp khó gấp đôi so với doanh nghiệp cùng ngành (09/02/2023) https://mekongasean.vn/vdsc-hoa-sen-gap-kho-gap-doi-so-voi-cac-doanh-nghiep-cung-nganh-22900.html"
+      - "Nhà Đầu tư — 'Con dao hai lưỡi' của doanh nghiệp thép (05/05/2021) https://nhadautu.vn/con-dao-hai-luoi-cua-doanh-nghiep-thep-d51392.html"
     extension_beyond_midterm: true
     checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
       - id: goods_in_transit_main_driver
@@ -1540,4 +1616,4 @@ hypotheses:
           value: 0.05
           abs: true
     status: reviewed
-    reviewed_by: null
+    reviewed_by: Nguyễn Tùng Dương

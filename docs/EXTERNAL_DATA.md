@@ -31,8 +31,8 @@ python scripts/import_price_xlsx.py data/external/vsa_prices.xlsx coking_coal_pr
 
 Chuỗi hiện có: `iron_ore_price` (World Bank, $/dmtu, 2015-01..2024-12; **nên thêm 2014 nếu dùng FY2015–2016**, vì cửa sổ so sánh 12 tháng cần dữ liệu trước năm đang xét). Dữ liệu World Bank dùng giấy phép mở (CC BY 4.0): nhớ ghi nguồn trong `docs/DATA_CARD.md`.
 
-`hrc_price` và `coking_coal_price` (thêm 2026-10-24): từ `data/external/vsa_prices.xlsx` do nhóm tổng hợp tay từ tin thị trường của Hiệp hội Thép Việt Nam (https://vsa.com.vn/category/tin-tuc/thi-truong-trong-nuoc/), giá **đầu tháng**, USD/tấn, 48 tháng 2019-01..2022-12. Cột "thép cuộn" được nhóm xác nhận là HRC (thép cuộn cán nóng). Giới hạn:
-- Chỉ phủ 2019–2022: các ca FY2016–FY2018 vẫn `NOT_EVALUABLE` cho hai chuỗi này; `percentile_vs_history` (cần ≥ 36 tháng lịch sử) chưa chạy được cho FY2021. Các dòng 2023–2024 trong file chưa có giá.
+`hrc_price` và `coking_coal_price` (thêm 2026-10-24): từ `data/external/vsa_prices.xlsx` do nhóm tổng hợp tay từ tin thị trường của Hiệp hội Thép Việt Nam (https://vsa.com.vn/category/tin-tuc/thi-truong-trong-nuoc/), giá **đầu tháng**, USD/tấn, 72 tháng 2019-01..2024-12 (2026-10-25: nhóm bổ sung 2023–2024 bằng file "Giá nguyên vật liệu full.xlsx"; 48 tháng 2019–2022 trùng khớp bản cũ). Cột "thép cuộn" được nhóm xác nhận là HRC (thép cuộn cán nóng). Giới hạn:
+- Bắt đầu từ 2019-01: các ca FY2016–FY2018 vẫn `NOT_EVALUABLE` cho hai chuỗi này; `percentile_vs_history` cần ≥ 36 tháng lịch sử có trước mốc as-of, nên chỉ chạy được từ khoảng FY2022. Giá 2024 chỉ dùng được cho ca có mốc as-of sau tháng đó (lọc as-of vẫn áp dụng).
 - Nguồn chỉ ghi ở mức chuyên mục, chưa có link bài cho từng tháng; ô khoảng giá đã lấy trung bình (thông tin gốc là khoảng).
 - Cột "phôi thép" (chỉ 2019-01..06) và "thép phế liệu" chưa dùng: chưa có chuỗi/giả thuyết nào trong thư viện cần chúng.
 

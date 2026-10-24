@@ -126,7 +126,7 @@ forbidden:
     - 'gian lận'
     - 'lừa đảo'
     - 'thao túng'
-    - 'làm giả'
+    - '\blàm giả\b'   # \b: không khớp "làm giảm" (bắt oan khi chạy thật 2026-10-25)
     - 'xào nấu'
     - 'phù phép'
     - 'thổi phồng'
@@ -161,6 +161,13 @@ causal:
   - '\bkhiến\b'
   - 'kéo theo'
   - 'làm cho'
+# Cụm THUẬT LẠI giả thuyết: mẫu nhân quả nằm sau cụm này trong cùng câu/vế (ngăn bởi . ; : ! ?) là
+# đang nêu nội dung giả thuyết ("Giả thuyết tồn kho tăng do mùa vụ ... UNVERIFIED"), không phải khẳng
+# định. Thêm 2026-10-25 sau lần chạy thật: ~38/40 lỗi unhedged_causal là loại này. Trạng thái nêu
+# trong câu vẫn được kiểm riêng (status_mismatch).
+attribution:
+  - '\bgiả thuyết\b'
+  - 'cho rằng'
 hedges:
   - 'có thể(?!\s+(thấy|nhận thấy|khẳng định))'
   - 'nhiều khả năng'

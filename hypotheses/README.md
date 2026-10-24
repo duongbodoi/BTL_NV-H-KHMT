@@ -1,6 +1,6 @@
 # Thư viện giả thuyết (ngành thép)
 
-Nội dung do **nhóm soạn** (`library_draft.yaml`, 7 giả thuyết tồn kho + 8 biên gộp, tất cả `status: draft`). Schema và luật kiểm:
+Nội dung do **nhóm soạn** (`library_draft.yaml`, 14 giả thuyết tồn kho + 8 biên gộp, tất cả `status: reviewed` từ 2026-10-25). Schema và luật kiểm:
 `src/steel_xai/hypotheses/library.py`, cấu hình: `configs/hypotheses.yaml`.
 
 Kiểm nhanh: `python -c "from steel_xai.hypotheses import load_library; print(load_library().coverage())"`
@@ -19,7 +19,7 @@ Mỗi giả thuyết khai `direction`: `up` (giải thích bất thường tăng
 
 `status: reviewed`, `reviewed_by` là họ tên người, `sources` không rỗng, claim/rationale/phản bác/`critical_missing_evidence` không rỗng,
 **có `checks`** gồm ≥ 1 check `critical` polarity `support` và ≥ 1 check phản bác, nội dung không nhắc mã công ty.
-Mã nguồn (`S0`..) phải có trong `HYPOTHESIS_LIBRARY_DRAFT.md` (`sources_catalog` trong config); file đó hiện chưa có trong repo.
+Thư viện hiện ghi nguồn đầy đủ (tên, ngày, link), không dùng mã. Nếu dùng mã (`S0`..) thì mã phải có trong `HYPOTHESIS_LIBRARY_DRAFT.md` (`sources_catalog` trong config).
 
 ## Còn thiếu so với `reviewed`
 

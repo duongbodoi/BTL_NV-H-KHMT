@@ -399,6 +399,27 @@ def test_gemini_retries_rate_limit_then_succeeds_and_gives_up_on_other_errors():
     assert len(post.calls) == 1
 
 
+def test_gemini_retries_timeouts_and_reraises_when_out_of_attempts():
+    slept = []
+    calls = []
+
+    def flaky(url, headers, body, timeout_s):
+        calls.append(1)
+        if len(calls) == 1:
+            raise TimeoutError("The read operation timed out")
+        return _gemini_reply()
+
+    tr = GeminiTransport("k", rate_limit_retries=2, backoff_s=3, post=flaky, sleep=slept.append)
+    assert _gcomplete(tr).text == '{"ok": true}' and slept == [3]
+
+    def dead(url, headers, body, timeout_s):
+        raise TimeoutError("timed out")
+
+    tr = GeminiTransport("k", rate_limit_retries=1, post=dead, sleep=slept.append)
+    with pytest.raises(LLMError, match="timed out"):  # client bọc lỗi transport thành LLMError
+        LLMClient(settings(), tr).call(REQ)
+
+
 def test_gemini_end_to_end_through_client_validates_schema(tmp_path):
     reply = json.dumps(GOOD, ensure_ascii=False)
     tr = GeminiTransport("k", post=FakePost(_gemini_reply(text=reply)))

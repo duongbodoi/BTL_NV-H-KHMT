@@ -3,7 +3,7 @@
 - **Ngày:** 2026-10-24
 - **Thực hiện:** Claude Code (Claude Sonnet 5.5), dưới sự kiểm tra của nhóm
 - **Spec:** `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md` (v2), mục 9, 10.1, 18, 20 (Phase 6), 23
-- **Trạng thái:** phần việc của Claude (schema, loader, validator) đã xong, qua 1 vòng review độc lập, lỗi đã sửa. **Chưa COMPLETED**: mục tiêu phase gồm thư viện 6–8 giả thuyết mỗi loại mà **nội dung do nhóm soạn** (spec mục 9); hiện thư viện là 15 bản nháp `draft` của nhóm (mục 11), chưa giả thuyết nào `reviewed`.
+- **Trạng thái:** phần việc của Claude (schema, loader, validator) đã xong, qua 1 vòng review độc lập, lỗi đã sửa. **Chưa COMPLETED**: mục tiêu phase gồm thư viện 6–8 giả thuyết mỗi loại mà **nội dung do nhóm soạn** (spec mục 9); hiện thư viện là 15 bản nháp `draft` của nhóm (mục 11), chưa giả thuyết nào `reviewed`. **Cập nhật 2026-10-25:** nhóm duyệt cả 22 giả thuyết (14 tồn kho, 8 biên gộp), `reviewed_by: Nguyễn Tùng Dương`, nguồn ghi đầy đủ tên/ngày/link; thư viện qua validator. Chưa đánh dấu COMPLETED (chờ nhóm quyết).
 
 ## ⚠ Việc của nhóm
 

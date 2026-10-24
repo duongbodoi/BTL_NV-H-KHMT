@@ -561,7 +561,7 @@ def test_unknown_tool_is_a_loud_error_not_not_evaluable():
 def test_registry_matches_library_tool_names_and_config():
     assert load_library_settings().known_tools == tool_names()
     used = set()
-    for h in load_library().drafts:
+    for h in load_library().reviewed:
         for c in h.checks:
             if c.kind == "quant":
                 used.add(c.tool)
@@ -660,7 +660,7 @@ def test_context_from_anomaly_and_run_quant_checks_over_a_hypothesis():
     store = FactStore(INV + REV + COGS, 2024)
     c = context_from_anomaly(anomaly, store, ExternalStore({}, S), S)
     assert (c.company, c.year, c.direction, c.asof) == ("AAA", 2022, "up", ASOF)
-    hyp = next(h for h in load_library().drafts if h.code == "INV-3")
+    hyp = next(h for h in load_library().reviewed if h.code == "INV-3")
     res = run_quant_checks(hyp, c)
     assert set(res) == {x.id for x in hyp.checks if x.kind == "quant"}
     assert res["inventory_outpaces_revenue"].status is CheckStatus.PASS  # 0,5 - 0,1 > 0

@@ -34,6 +34,7 @@ class ReportSettings:
     indicator_labels: dict[str, str]
     forbidden: dict[str, tuple[re.Pattern[str], ...]]
     causal: tuple[re.Pattern[str], ...]
+    attribution: tuple[re.Pattern[str], ...]
     hedges: tuple[re.Pattern[str], ...]
     disclaimer: str
     draft_warning: str
@@ -108,6 +109,7 @@ def load_report_settings(cfg: dict[str, Any] | None = None) -> ReportSettings:
         indicator_labels={str(k): str(v) for k, v in labels.items()},
         forbidden={g: _patterns(forb[g], f"forbidden.{g}") for g in FORBIDDEN_GROUPS},
         causal=_patterns(cfg.get("causal"), "causal"),
+        attribution=_patterns(cfg.get("attribution"), "attribution"),
         hedges=_patterns(cfg.get("hedges"), "hedges"),
         disclaimer=_text(cfg.get("disclaimer"), "disclaimer"),
         draft_warning=_text(cfg.get("draft_warning"), "draft_warning"),
