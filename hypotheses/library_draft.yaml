@@ -1,0 +1,988 @@
+# Thư viện giả thuyết — BẢN NHÁP. Xem HYPOTHESIS_LIBRARY_DRAFT.md cho danh mục nguồn S0–S16.
+# Chưa có giả thuyết nào được duyệt: status: draft, reviewed_by: null.
+# Trường `checks` (dạng có cấu trúc) sẽ được thêm ở Phase 6 theo spec mục 10.1.
+# Metric có hậu tố "*" là chỉ tiêu Phase 3 chưa trích, cần bổ sung.
+
+hypotheses:
+
+  - id: inventory_raw_material_stockpiling
+    code: INV-1
+    anomaly_type: inventory_increase
+    claim: Tồn kho tăng do doanh nghiệp tích trữ nguyên vật liệu khi giá đầu vào ở vùng thấp.
+    business_rationale: Doanh nghiệp thép mua trữ nguyên liệu giá rẻ để hưởng lợi khi giá tăng; đây là "con dao hai lưỡi" khi giá đảo chiều.
+    expected_quantitative_evidence:
+      - raw_materials tăng và chiếm phần lớn mức tăng tồn kho
+      - giá quặng sắt hoặc HRC cuối kỳ ở vùng thấp so với trung vị nhiều năm (chỉ dùng dữ liệu đến mốc as-of)
+    expected_textual_evidence: [dự trữ nguyên liệu, tích trữ, giá nguyên liệu thấp]
+    contradictory_evidence:
+      - giá đầu vào đang ở vùng cao
+      - mức tăng tồn kho chủ yếu ở thành phẩm
+    required_external_data: [iron_ore_price, hrc_price]
+    critical_missing_evidence:
+      - không có giá đầu vào tại thời điểm cuối kỳ
+    testable_with_annual_data: partial
+    sources: [S0, S1, S8, S9]
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: raw_materials_main_driver
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: share_of_change
+        params:
+          component: raw_materials
+          total: inventory_total
+        pass_when:
+          op: '>='
+          value: 0.5
+      - id: input_price_low
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: percentile_vs_history
+        params:
+          series:
+          - iron_ore_price
+          - hrc_price
+          asof_only: true
+        pass_when:
+          op: <=
+          value: 0.33
+      - id: input_price_high
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: percentile_vs_history
+        params:
+          series:
+          - iron_ore_price
+          - hrc_price
+          asof_only: true
+        pass_when:
+          op: '>='
+          value: 0.67
+      - id: finished_goods_main_driver
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: share_of_change
+        params:
+          component: finished_goods
+          total: inventory_total
+        pass_when:
+          op: '>='
+          value: 0.5
+      - id: stockpile_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - dự trữ nguyên liệu
+        - tích trữ
+        - giá nguyên liệu thấp
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_capacity_expansion
+    code: INV-2
+    anomaly_type: inventory_increase
+    claim: Tồn kho tăng do chuẩn bị mở rộng sản xuất.
+    business_rationale: Dự án công suất mới cần nguyên liệu dự trữ trước khi vận hành.
+    expected_quantitative_evidence:
+      - cip tăng
+      - capex tăng
+      - raw_materials tăng
+    expected_textual_evidence: [dự án, mở rộng công suất, chạy thử, đưa vào vận hành]
+    contradictory_evidence:
+      - cip và capex giảm
+      - dự án bị hoãn hoặc dừng
+    required_external_data: []
+    critical_missing_evidence:
+      - không có bằng chứng nối trực tiếp mở rộng công suất với mức tăng tồn kho
+    testable_with_annual_data: yes
+    sources: [S0, S5, S7]
+    source_strength: weak   # chưa có nguồn ngoài nối trực tiếp cơ chế
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: capex_up
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: capex
+        pass_when:
+          op: '>='
+          value: 0.2
+          signed_by_anomaly_direction: true
+      - id: cip_up
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: construction_in_progress
+        pass_when:
+          op: '>='
+          value: 0.2
+          signed_by_anomaly_direction: true
+      - id: raw_materials_up
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: raw_materials
+        pass_when:
+          op: '>='
+          value: 0.2
+          signed_by_anomaly_direction: true
+      - id: expansion_text
+        kind: text
+        importance: critical
+        polarity: support
+        queries:
+        - dự án mở rộng công suất
+        - chạy thử
+        - đưa vào vận hành
+      - id: cip_down
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: growth_yoy
+        params:
+          metric: construction_in_progress
+        pass_when:
+          op: <=
+          value: -0.2
+      - id: capex_down
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: growth_yoy
+        params:
+          metric: capex
+        pass_when:
+          op: <=
+          value: -0.2
+      - id: project_delayed_text
+        kind: text
+        importance: supporting
+        polarity: contradict
+        queries:
+        - dự án bị hoãn
+        - dừng dự án
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_weak_demand
+    code: INV-3
+    anomaly_type: inventory_increase
+    claim: Tồn kho tăng do hàng bán chậm, nhu cầu yếu.
+    business_rationale: Cầu giảm so với kế hoạch làm thành phẩm tồn đọng; tồn kho tăng nhanh hơn doanh thu là tín hiệu xấu về lợi nhuận tương lai.
+    expected_quantitative_evidence:
+      - finished_goods tăng nhanh hơn doanh thu
+      - (Δ tồn kho) − (Δ doanh thu) > 0
+      - số ngày tồn kho tăng
+      - inventory_provision tăng
+    expected_textual_evidence: [tiêu thụ chậm, nhu cầu yếu, sức mua giảm, trích lập dự phòng]
+    contradictory_evidence:
+      - doanh thu tăng mạnh
+      - mức tăng tồn kho nằm ở nguyên vật liệu
+    required_external_data: []
+    critical_missing_evidence:
+      - không tách được thành phần tồn kho (thuyết minh thiếu)
+    testable_with_annual_data: yes
+    sources: [S0, S3, S6, S15, S16]
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: inventory_outpaces_revenue
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_gap
+        params:
+          a: inventory_total
+          b: net_revenue
+        pass_when:
+          op: '>'
+          value: 0
+          signed_by_anomaly_direction: true
+      - id: finished_goods_outpaces_revenue
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_gap
+        params:
+          a: finished_goods
+          b: net_revenue
+        pass_when:
+          op: '>'
+          value: 0
+          signed_by_anomaly_direction: true
+      - id: dio_up
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: days_inventory_change
+        params: {}
+        pass_when:
+          op: '>'
+          value: 0
+          signed_by_anomaly_direction: true
+      - id: provision_up
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: inventory_provision
+        pass_when:
+          op: '>'
+          value: 0
+          signed_by_anomaly_direction: true
+      - id: revenue_strong
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: growth_yoy
+        params:
+          metric: net_revenue
+        pass_when:
+          op: '>='
+          value: 0.2
+      - id: raw_materials_main_driver
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: share_of_change
+        params:
+          component: raw_materials
+          total: inventory_total
+        pass_when:
+          op: '>='
+          value: 0.5
+      - id: weak_demand_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - tiêu thụ chậm
+        - nhu cầu yếu
+        - sức mua giảm
+        - trích lập dự phòng
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_seasonality
+    code: INV-4
+    anomaly_type: inventory_increase
+    claim: Tồn kho tăng do yếu tố mùa vụ.
+    business_rationale: Tiêu thụ thép xây dựng giảm vào mùa mưa và tăng vào mùa xây dựng; doanh nghiệp tích hàng trước mùa cao điểm.
+    expected_quantitative_evidence:
+      - cùng kỳ các năm trước có đỉnh tồn kho tương tự (cần dữ liệu quý)
+    expected_textual_evidence: [mùa xây dựng, mùa mưa, cao điểm cuối năm]
+    contradictory_evidence:
+      - các năm trước cùng kỳ không có đỉnh
+    required_external_data: []
+    critical_missing_evidence:
+      - không có dữ liệu theo quý
+    testable_with_annual_data: no   # dự kiến UNVERIFIED, phân tích ở RQ3
+    sources: [S0, S13]
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: seasonal_text
+        kind: text
+        importance: critical
+        polarity: support
+        queries:
+        - mùa xây dựng
+        - mùa mưa
+        - cao điểm cuối năm
+      - id: not_seasonal_text
+        kind: text
+        importance: supporting
+        polarity: contradict
+        queries:
+        - tồn kho không mang tính mùa vụ
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_price_not_volume
+    code: INV-5
+    anomaly_type: inventory_increase
+    claim: Giá trị tồn kho tăng do giá đầu vào tăng, không phải số lượng tăng.
+    business_rationale: BCTC ghi tồn kho theo giá trị; giá nguyên liệu tăng làm giá trị tồn kho tăng dù lượng không đổi.
+    expected_quantitative_evidence:
+      - mức tăng giá trị tồn kho xấp xỉ mức tăng giá nguyên liệu
+    expected_textual_evidence: [số lượng tồn kho, sản lượng tồn kho (báo cáo thường niên)]
+    contradictory_evidence:
+      - giá đầu vào đi ngang hoặc giảm trong khi tồn kho tăng mạnh
+      - số lượng tồn kho tăng
+    required_external_data: [iron_ore_price, hrc_price]
+    critical_missing_evidence:
+      - BCTC không công bố số lượng tồn kho
+    testable_with_annual_data: partial
+    sources: [S0, S8, S9]
+    source_strength: weak   # S8, S9 chỉ hỗ trợ gián tiếp
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: inventory_growth_tracks_input_price
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_vs_series
+        params:
+          metric: inventory_total
+          series:
+          - iron_ore_price
+          - hrc_price
+        pass_when:
+          op: <=
+          value: 0.1
+          abs: true
+      - id: input_price_flat_or_down
+        kind: quant
+        importance: critical
+        polarity: contradict
+        tool: lagged_external_series
+        params:
+          series:
+          - iron_ore_price
+          - hrc_price
+          lag: from_config
+        pass_when:
+          op: <=
+          value: 0
+      - id: quantity_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - số lượng tồn kho
+        - sản lượng tồn kho
+      - id: quantity_up_text
+        kind: text
+        importance: supporting
+        polarity: contradict
+        queries:
+        - số lượng tồn kho tăng
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_accounting_policy_change
+    code: INV-6
+    anomaly_type: inventory_increase
+    claim: Biến động tồn kho do thay đổi chính sách kế toán hàng tồn kho.
+    business_rationale: VAS 02 yêu cầu áp dụng nhất quán phương pháp tính giá; thay đổi phương pháp làm thay đổi giá trị tồn kho mà không phản ánh kinh doanh.
+    expected_quantitative_evidence:
+      - biến động không giải thích được bằng các chỉ tiêu hoạt động
+    expected_textual_evidence: [thay đổi chính sách kế toán, phương pháp tính giá hàng tồn kho, bình quân gia quyền, nhập trước xuất trước]
+    contradictory_evidence:
+      - đoạn chính sách hàng tồn kho giữ nguyên giữa hai năm
+    required_external_data: []
+    critical_missing_evidence:
+      - không trích được đoạn chính sách kế toán của một trong hai năm
+    testable_with_annual_data: yes
+    sources: [S0, S14]
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: policy_change_text
+        kind: text
+        importance: critical
+        polarity: support
+        queries:
+        - thay đổi chính sách kế toán
+        - phương pháp tính giá hàng tồn kho
+        - bình quân gia quyền
+        - nhập trước xuất trước
+      - id: policy_unchanged_text
+        kind: text
+        importance: critical
+        polarity: contradict
+        queries:
+        - chính sách hàng tồn kho nhất quán với năm trước
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_goods_in_transit_timing
+    code: INV-7
+    anomaly_type: inventory_increase
+    claim: Tồn kho tăng do hàng mua đang đi đường hoặc thời điểm nhập hàng sát cuối kỳ.
+    business_rationale: Doanh nghiệp nhập khẩu nguyên liệu ghi nhận hàng đi đường vào tồn kho; lô hàng lớn về sát ngày khóa sổ làm tồn kho cuối kỳ tăng tạm thời.
+    expected_quantitative_evidence:
+      - goods_in_transit* tăng và chiếm phần lớn mức tăng tồn kho
+      - phải trả người bán tăng
+    expected_textual_evidence: [hàng mua đang đi trên đường, nhập khẩu]
+    contradictory_evidence:
+      - hàng đi đường ổn định
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources: [S3, S8]
+    extension_beyond_midterm: true
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: goods_in_transit_main_driver
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: share_of_change
+        params:
+          component: goods_in_transit
+          total: inventory_total
+        pass_when:
+          op: '>='
+          value: 0.5
+      - id: payables_up
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: accounts_payable
+        pass_when:
+          op: '>'
+          value: 0
+          signed_by_anomaly_direction: true
+      - id: in_transit_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - hàng mua đang đi trên đường
+        - nhập khẩu
+      - id: goods_in_transit_stable
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: growth_yoy
+        params:
+          metric: goods_in_transit
+        pass_when:
+          op: <
+          value: 0.05
+          abs: true
+    status: draft
+    reviewed_by: null
+
+  - id: margin_selling_price
+    code: GM-1
+    anomaly_type: gross_margin_change
+    claim: Biên gộp thay đổi do giá bán thép thay đổi.
+    business_rationale: Giá bán biến động nhanh hơn giá vốn đã ghi nhận làm biên gộp dịch chuyển.
+    expected_quantitative_evidence:
+      - giá thép (HRC hoặc thép xây dựng theo sản phẩm chính) đổi cùng chiều biên gộp trong kỳ
+    expected_textual_evidence: [giá bán, điều chỉnh giá bán]
+    contradictory_evidence:
+      - giá thép đi ngược chiều biên gộp
+    required_external_data: [steel_price]
+    critical_missing_evidence:
+      - không có giá bán bình quân của doanh nghiệp
+    testable_with_annual_data: partial
+    sources: [S2, S5, S10]
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: steel_price_same_direction
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: lagged_external_series
+        params:
+          series:
+          - steel_price
+          - hrc_price
+          lag: from_config
+        pass_when:
+          op: '>'
+          value: 0
+          signed_by_anomaly_direction: true
+      - id: revenue_vs_cogs_growth
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_gap
+        params:
+          a: net_revenue
+          b: cogs
+        pass_when:
+          op: '>'
+          value: 0
+          signed_by_anomaly_direction: true
+      - id: steel_price_opposite_direction
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: lagged_external_series
+        params:
+          series:
+          - steel_price
+          - hrc_price
+          lag: from_config
+        pass_when:
+          op: <
+          value: 0
+          signed_by_anomaly_direction: true
+      - id: selling_price_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - giá bán
+        - điều chỉnh giá bán
+    status: draft
+    reviewed_by: null
+
+  - id: margin_input_cost_lag
+    code: GM-2
+    anomaly_type: gross_margin_change
+    claim: Biên gộp thay đổi do giá nguyên liệu đầu vào thay đổi, có độ trễ.
+    business_rationale: Nguyên liệu chiếm 65–75% giá vốn; quặng sắt và than cốc (doanh nghiệp lò cao) hoặc HRC (doanh nghiệp tôn mạ) quyết định chênh lệch giá bán – giá vốn.
+    expected_quantitative_evidence:
+      - giá đầu vào đổi ngược chiều biên gộp sau độ trễ đã cấu hình
+      - cogs / net_revenue đổi theo
+    expected_textual_evidence: [giá nguyên liệu, chi phí đầu vào]
+    contradictory_evidence:
+      - giá đầu vào đi cùng chiều biên gộp
+    required_external_data: [iron_ore_price, coking_coal_price, hrc_price]
+    critical_missing_evidence:
+      - không có chuỗi giá đầu vào phù hợp với loại doanh nghiệp
+    testable_with_annual_data: partial
+    sources: [S2, S4, S5, S10]
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: input_price_opposite_direction
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: lagged_external_series
+        params:
+          series:
+          - iron_ore_price
+          - coking_coal_price
+          - hrc_price
+          lag: from_config
+        pass_when:
+          op: '>'
+          value: 0
+          any: true
+          signed_opposite_to_anomaly_direction: true
+      - id: cogs_ratio_moves
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: ratio_change
+        params:
+          numerator: cogs
+          denominator: net_revenue
+        pass_when:
+          op: '>'
+          value: 0
+          signed_opposite_to_anomaly_direction: true
+      - id: input_price_same_direction
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: lagged_external_series
+        params:
+          series:
+          - iron_ore_price
+          - coking_coal_price
+          - hrc_price
+          lag: from_config
+        pass_when:
+          op: '>'
+          value: 0
+          any: true
+          signed_by_anomaly_direction: true
+      - id: input_cost_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - giá nguyên liệu
+        - chi phí đầu vào
+    status: draft
+    reviewed_by: null
+
+  - id: margin_inventory_cost_effect
+    code: GM-3
+    anomaly_type: gross_margin_change
+    claim: Biên gộp thay đổi do hàng tồn kho mua giá cao (khi giá giảm) hoặc giá thấp (khi giá tăng).
+    business_rationale: Giá vốn theo bình quân gia quyền phản ánh giá mua trước đó; tồn kho lớn khuếch đại tác động của biến động giá lên biên gộp.
+    expected_quantitative_evidence:
+      - tồn kho đầu kỳ lớn so với giá vốn
+      - giá đầu vào giảm (biên giảm) hoặc tăng (biên tăng) trong kỳ
+      - biên gộp đổi mạnh hơn mức chênh lệch giá bán – giá đầu vào
+    expected_textual_evidence: [hàng tồn kho giá cao, giá vốn cao, nguyên liệu giá rẻ]
+    contradictory_evidence:
+      - tồn kho đầu kỳ nhỏ
+      - giá đầu vào ổn định
+    required_external_data: [iron_ore_price, hrc_price]
+    critical_missing_evidence:
+      - không có giá đầu vào trong kỳ
+    testable_with_annual_data: partial
+    sources: [S3, S6, S7, S8, S9]
+    extension_beyond_midterm: true
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: opening_inventory_large
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: ratio
+        params:
+          numerator: inventory_total
+          denominator: cogs
+          period: prior_year_end
+        pass_when:
+          op: '>='
+          value: 0.2
+      - id: input_price_moved
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: lagged_external_series
+        params:
+          series:
+          - iron_ore_price
+          - hrc_price
+          lag: from_config
+        pass_when:
+          op: '>='
+          value: 0.05
+          abs: true
+      - id: opening_inventory_small
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: ratio
+        params:
+          numerator: inventory_total
+          denominator: cogs
+          period: prior_year_end
+        pass_when:
+          op: <
+          value: 0.1
+      - id: input_price_stable
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: lagged_external_series
+        params:
+          series:
+          - iron_ore_price
+          - hrc_price
+          lag: from_config
+        pass_when:
+          op: <
+          value: 0.03
+          abs: true
+      - id: high_cost_inventory_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - hàng tồn kho giá cao
+        - giá vốn cao
+        - nguyên liệu giá rẻ
+    status: draft
+    reviewed_by: null
+
+  - id: margin_inventory_provision
+    code: GM-4
+    anomaly_type: gross_margin_change
+    claim: Biên gộp thay đổi do trích lập hoặc hoàn nhập dự phòng giảm giá hàng tồn kho.
+    business_rationale: Dự phòng theo giá trị thuần có thể thực hiện được (VAS 02); trích lập kéo biên xuống, hoàn nhập đẩy biên lên.
+    expected_quantitative_evidence:
+      - inventory_provision_charge* (thuyết minh giá vốn) lớn so với mức thay đổi lợi nhuận gộp
+      - inventory_provision đổi mạnh
+    expected_textual_evidence: [trích lập dự phòng, hoàn nhập dự phòng]
+    contradictory_evidence:
+      - biến động dự phòng nhỏ so với mức thay đổi lợi nhuận gộp
+    required_external_data: []
+    critical_missing_evidence:
+      - thuyết minh giá vốn không tách dòng dự phòng
+    testable_with_annual_data: yes
+    sources: [S4, S5, S6, S14]
+    extension_beyond_midterm: true
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: provision_moves
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: inventory_provision
+        pass_when:
+          op: '>='
+          value: 0.3
+          signed_opposite_to_anomaly_direction: true
+      - id: provision_charge_large
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: ratio_of_changes
+        params:
+          numerator: inventory_provision_charge
+          denominator: gross_profit
+        pass_when:
+          op: '>='
+          value: 0.3
+      - id: provision_change_small
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: ratio_of_changes
+        params:
+          numerator: inventory_provision
+          denominator: gross_profit
+        pass_when:
+          op: <
+          value: 0.1
+      - id: provision_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - trích lập dự phòng
+        - hoàn nhập dự phòng
+    status: draft
+    reviewed_by: null
+
+  - id: margin_product_market_mix
+    code: GM-5
+    anomaly_type: gross_margin_change
+    claim: Biên gộp thay đổi do cơ cấu sản phẩm hoặc thị trường (nội địa/xuất khẩu) thay đổi.
+    business_rationale: Sản phẩm và thị trường có biên khác nhau (thép xây dựng được bảo hộ thuế nhập khẩu, HRC và tôn mạ hướng xuất khẩu chịu cạnh tranh).
+    expected_quantitative_evidence:
+      - doanh thu theo sản phẩm/thị trường/bộ phận* dịch chuyển
+    expected_textual_evidence: [cơ cấu sản phẩm, tỷ trọng xuất khẩu, thị trường xuất khẩu]
+    contradictory_evidence:
+      - cơ cấu không đổi
+    required_external_data: []
+    critical_missing_evidence:
+      - thuyết minh không tách doanh thu theo sản phẩm hoặc thị trường
+    testable_with_annual_data: partial
+    sources: [S2, S3, S10]
+    extension_beyond_midterm: true
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: segment_revenue_shift
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: share_shift
+        params:
+          metric: segment_revenue
+        pass_when:
+          op: '>='
+          value: 0.05
+          abs: true
+      - id: mix_text
+        kind: text
+        importance: critical
+        polarity: support
+        queries:
+        - cơ cấu sản phẩm
+        - tỷ trọng xuất khẩu
+        - thị trường xuất khẩu
+      - id: mix_unchanged_text
+        kind: text
+        importance: supporting
+        polarity: contradict
+        queries:
+        - cơ cấu sản phẩm không thay đổi đáng kể
+    status: draft
+    reviewed_by: null
+
+  - id: margin_capacity_utilization
+    code: GM-6
+    anomaly_type: gross_margin_change
+    claim: Biên gộp thay đổi do công suất sử dụng thay đổi (chi phí cố định phân bổ trên sản lượng).
+    business_rationale: Dừng hoặc tái khởi động lò cao làm chi phí cố định trên mỗi tấn thay đổi.
+    expected_quantitative_evidence:
+      - doanh thu giảm và biên gộp giảm mạnh hơn mức giảm giá bán
+      - sản lượng giảm (báo cáo thường niên)
+    expected_textual_evidence: [dừng lò, giảm công suất, tái khởi động]
+    contradictory_evidence:
+      - sản lượng ổn định
+    required_external_data: []
+    critical_missing_evidence:
+      - BCTC không công bố sản lượng
+    testable_with_annual_data: partial
+    sources: [S5, S7, S15]
+    extension_beyond_midterm: true
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: production_volume_change
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: production_volume
+        pass_when:
+          op: '>='
+          value: 0.1
+          signed_by_anomaly_direction: true
+      - id: revenue_scale_change
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: net_revenue
+        pass_when:
+          op: '>='
+          value: 0.1
+          signed_by_anomaly_direction: true
+      - id: furnace_text
+        kind: text
+        importance: critical
+        polarity: support
+        queries:
+        - dừng lò
+        - giảm công suất
+        - tái khởi động
+      - id: production_stable
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: growth_yoy
+        params:
+          metric: production_volume
+        pass_when:
+          op: <
+          value: 0.03
+          abs: true
+    status: draft
+    reviewed_by: null
+
+  - id: margin_new_project_depreciation
+    code: GM-7
+    anomaly_type: gross_margin_change
+    claim: Biên gộp giảm do khấu hao tăng khi dự án mới đi vào vận hành.
+    business_rationale: Tài sản mới chuyển từ XDCB dở dang sang tài sản cố định bắt đầu trích khấu hao vào giá vốn.
+    expected_quantitative_evidence:
+      - cip_transfer_to_fixed_assets* lớn
+      - depreciation* tăng
+    expected_textual_evidence: [đưa vào vận hành, hoàn thành dự án]
+    contradictory_evidence:
+      - không có dự án lớn hoàn thành trong kỳ
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources: [S5, S7]
+    extension_beyond_midterm: true
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: cip_transfer_large
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: ratio
+        params:
+          numerator: cip_transfer_to_fixed_assets
+          denominator: construction_in_progress
+          period: prior_year_end
+        pass_when:
+          op: '>='
+          value: 0.3
+      - id: depreciation_up
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: depreciation
+        pass_when:
+          op: '>='
+          value: 0.1
+      - id: commissioning_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - đưa vào vận hành
+        - hoàn thành dự án
+      - id: no_major_transfer
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: ratio
+        params:
+          numerator: cip_transfer_to_fixed_assets
+          denominator: construction_in_progress
+          period: prior_year_end
+        pass_when:
+          op: <
+          value: 0.1
+      - id: no_project_text
+        kind: text
+        importance: supporting
+        polarity: contradict
+        queries:
+        - không có dự án lớn hoàn thành trong kỳ
+    status: draft
+    reviewed_by: null
+
+  - id: margin_trade_policy_fx
+    code: GM-8
+    anomaly_type: gross_margin_change
+    claim: Biên gộp thay đổi do biện pháp phòng vệ thương mại hoặc biến động tỷ giá.
+    business_rationale: Thuế chống bán phá giá ở thị trường xuất khẩu ép giá bán; tỷ giá ảnh hưởng giá nguyên liệu nhập khẩu.
+    expected_quantitative_evidence:
+      - tỷ trọng doanh thu xuất khẩu* đổi
+      - tỷ giá USD/VND biến động
+    expected_textual_evidence: [chống bán phá giá, thuế tự vệ, tỷ giá]
+    contradictory_evidence:
+      - không có biện pháp mới
+      - tỷ giá ổn định
+    required_external_data: [usd_vnd]
+    critical_missing_evidence:
+      - không có tỷ trọng xuất khẩu
+    testable_with_annual_data: partial
+    sources: [S2, S10, S11, S12]
+    extension_beyond_midterm: true
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+      - id: usd_vnd_moved
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: lagged_external_series
+        params:
+          series:
+          - usd_vnd
+          lag: 0
+        pass_when:
+          op: '>='
+          value: 0.03
+          abs: true
+      - id: trade_defense_text
+        kind: text
+        importance: critical
+        polarity: support
+        queries:
+        - chống bán phá giá
+        - thuế tự vệ
+        - tỷ giá
+      - id: export_share_change
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: share_shift
+        params:
+          metric: export_revenue_share
+        pass_when:
+          op: '>='
+          value: 0.05
+          abs: true
+      - id: usd_vnd_stable
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: lagged_external_series
+        params:
+          series:
+          - usd_vnd
+          lag: 0
+        pass_when:
+          op: <
+          value: 0.01
+          abs: true
+      - id: no_new_measure_text
+        kind: text
+        importance: supporting
+        polarity: contradict
+        queries:
+        - không có biện pháp phòng vệ thương mại mới
+    status: draft
+    reviewed_by: null

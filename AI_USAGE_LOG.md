@@ -282,3 +282,30 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 - Review độc lập vòng 2 (subagent) trên phần thêm sau bản đầu: 2 HIGH (số so sánh từ BCTC năm sau; peer công bố sau as-of), 1 MEDIUM (ca chỉ do luật peer), 1 LOW (trích ngày ký, chưa sửa, fail-safe). Đã sửa các lỗi HIGH/MEDIUM kèm 4 test hồi quy.
 - Nhóm không có ngày công bố, chỉ có năm: dùng tạm ngày ký báo cáo kiểm toán trích tự động.
 - Người cần tự xác minh: chốt ngưỡng trên tập dev; duyệt các mục NHÁP ở `DEVIATIONS_FROM_MIDTERM.md`; chọn 18 ca từ `anomaly_candidates.csv` (Claude không chọn ca).
+
+## 2026-10-24 — Phase 6 (Hypothesis library)
+
+**Công cụ:** Claude Code (Claude Sonnet 5.5).
+
+**Bối cảnh:** nhóm yêu cầu bắt đầu Phase 6 sau khi Phase 5 đánh dấu COMPLETED. Theo spec mục 9, nội dung thư viện giả thuyết do nhóm soạn; Claude chỉ dựng schema, loader, validator và bản nháp placeholder.
+
+**Việc Claude đã làm:**
+- Audit-first: `hypotheses/` chỉ có `__init__.py` rỗng; không có `Hypothesis` trong `contracts.py`.
+- `contracts.Check`/`Hypothesis`; `configs/hypotheses.yaml`; `hypotheses/library.py`; `tests/test_hypotheses.py`; một bản nháp `hypotheses/inventory_capacity_expansion.yaml` (chép từ ví dụ spec 9.1, `status: draft`, không có nội dung do Claude nghĩ ra).
+
+**Lỗi/sai sót bắt được:** review độc lập (subagent), 0 CRITICAL, 3 HIGH, 4 MEDIUM, 4 LOW, mỗi lỗi có input tái hiện:
+- HIGH: file `.yml` bị bỏ sót im lặng; khóa YAML trùng khiến giá trị cuối thắng (che `reviewed_by: Claude` bằng một dòng sau); bộ lọc "reviewed_by là người" qua mặt được bằng `ClaudeBot`, zero-width, Cyrillic, `GPT4`, `TBD`...
+- MEDIUM: giá trị rác `0`/`False` lọt qua kiểm tra truthy; chỉ có check critical phản bác; không chặn mã công ty; `sources: ["x"]`.
+- LOW: draft mang `reviewed_by: Claude`; tên file không khớp id; `from_dict` không validate (chưa sửa, ghi nhận).
+- Đã sửa trừ mục cuối, kèm test hồi quy.
+
+**Phần người cần tự xác minh:**
+- **Soạn nội dung thư viện** (6–8 giả thuyết mỗi loại), điền nguồn thật, checks, rồi đặt `status: reviewed` và `reviewed_by`. Bộ lọc "người" chỉ là lưới lọc; người duyệt/commit là kiểm soát cuối.
+- Xem lại các quyết định ở mục 3 của `docs/phase_reports/PHASE_6.md` (critical phải có check support, chặn mã công ty).
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-
+
+**Cập nhật (cùng ngày):** nhóm yêu cầu Claude sinh giả thuyết nháp, Claude đã sinh 15 bản (`status: draft`); sau đó nhóm đưa `library_draft.yaml` của chính họ và yêu cầu bỏ bản của Claude. Đã xóa toàn bộ bản Claude sinh, dùng file của nhóm; loader mở rộng để nạp định dạng `hypotheses: [...]` và các trường phụ. Claude không sửa nội dung giả thuyết của nhóm. Người cần: thêm `checks`, điền `critical_missing_evidence` còn trống (INV-7, GM-7), tạo `HYPOTHESIS_LIBRARY_DRAFT.md` (danh mục nguồn S0–S16), rồi duyệt.
+
+**Cập nhật cuối:** theo yêu cầu của nhóm, Claude đề xuất `checks` cho cả 15 giả thuyết trong `hypotheses/library_draft.yaml` (chèn khối `checks:`, giữ nguyên các trường nhóm viết; có bản sao lưu và so sánh tự động). Ngưỡng `pass_when`, tên `tool`, danh sách chuỗi giá và mức `critical` là phỏng đoán của Claude, nhóm cần rà trước khi duyệt.

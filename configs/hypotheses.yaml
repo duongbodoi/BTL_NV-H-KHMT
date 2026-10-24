@@ -1,0 +1,27 @@
+# Thư viện giả thuyết (spec mục 9): NỘI DUNG do nhóm soạn; file này chỉ cấu hình việc kiểm tra.
+# Mỗi giả thuyết một file `<id>.yaml` trong `library_dir` (tên file phải trùng `id`).
+library_dir: hypotheses
+
+# Số giả thuyết `reviewed` mỗi loại (spec mục 9: 6-8, nhóm có thể thêm). Chỉ dùng để báo cáo thiếu.
+min_reviewed_per_type: 6
+
+# `reviewed_by` phải là người (spec mục 9). Bộ lọc chỉ chặn phần lớn trường hợp rõ ràng; người
+# duyệt/commit vẫn là kiểm soát cuối. Cần họ tên >= 2 từ và không phải giá trị giữ chỗ.
+# `words`: chuỗi con của tên đã chuẩn hóa (NFKC, bỏ ký tự ẩn, chỉ giữ chữ cái);
+# `tokens`: phải trùng nguyên một từ của tên.
+non_human_reviewer_words: [claude, anthropic, gpt, chatgpt, openai, gemini, llm, sonnet, opus, haiku, llama, grok, mistral, copilot, assistant, chatbot]
+non_human_reviewer_tokens: [ai, bot, ml]
+placeholder_reviewers: [tbd, n/a, na, none, unknown, nhóm, team, chưa có]
+
+# Mỗi mục trong `sources` (khi reviewed) tối thiểu bấy nhiêu ký tự, tránh "x" hoặc "n/a".
+min_source_chars: 8
+
+# Tên `tool` được phép trong check `quant`. Rỗng = chưa kiểm (registry tool có ở Phase 8; khi đó
+# điền tên tool vào đây).
+known_tools: []
+
+# Nguồn trong `sources` có thể là mã trong danh mục (ví dụ S0..S16) hoặc mô tả đầy đủ. Khi `reviewed`,
+# mã phải xuất hiện trong file danh mục `sources_catalog`; chưa có file đó thì giả thuyết dùng mã
+# không thể `reviewed`.
+source_code_pattern: "S[0-9]+"
+sources_catalog: HYPOTHESIS_LIBRARY_DRAFT.md

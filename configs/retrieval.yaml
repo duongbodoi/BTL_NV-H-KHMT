@@ -1,4 +1,21 @@
 # Truy xuất bằng chứng văn bản (spec mục 10.3). Bắt đầu BM25; dense/hybrid chỉ khi đo thấy cần.
 method: bm25
-top_k: null
-enforce_asof_filter: true  # lọc as-of trong code, không dựa vào prompt (spec mục 7.2)
+# Số đoạn trả về mỗi truy vấn. 5 là giá trị khởi điểm của Claude; nhóm chốt trên tập dev (spec mục 10.3).
+top_k: 5
+enforce_asof_filter: true  # BẮT BUỘC true: lọc as-of trong code, không dựa vào prompt (spec mục 7.2)
+
+bm25:
+  k1: 1.5
+  b: 0.75
+  ngrams: [1, 2]   # đơn vị là âm tiết; thêm bigram để khớp cụm từ tiếng Việt ("hàng tồn kho", "dự phòng")
+  min_score: 0.0   # chỉ trả đoạn có điểm > min_score (không trả đoạn không khớp từ nào)
+
+chunking:
+  max_chars: 1500        # đoạn dài hơn bị tách theo câu / hàng bảng
+  include_tables: true   # bảng thuyết minh (thành phần tồn kho, XDCB dở dang...)
+
+# Loại báo cáo được nạp vào kho: consolidated | separate. Phase 3-5 chỉ dùng consolidated.
+document_kinds: [consolidated]
+
+# File chunk đã dựng (JSONL); tạo bởi scripts/build_rag_index.py
+chunks_file: rag_chunks.jsonl   # nằm trong paths.processed của dataset.yaml
