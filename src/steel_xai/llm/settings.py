@@ -9,6 +9,7 @@ from typing import Any
 
 from steel_xai.config import PROJECT_ROOT, ConfigError, load_config
 
+PROVIDERS = ("anthropic", "gemini")
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 FORBIDDEN_KEYS = ("temperature", "top_p", "top_k")
 
@@ -65,8 +66,8 @@ def load_llm_settings(cfg: dict[str, Any] | None = None) -> LLMSettings:
     for k in FORBIDDEN_KEYS:
         if cfg.get(k) is not None:
             raise ConfigError(f"llm.{k} không được đặt: API từ chối tham số lấy mẫu (xem llm.yaml)")
-    if cfg.get("provider") != "anthropic":
-        raise ConfigError("llm.provider hiện chỉ hỗ trợ 'anthropic'")
+    if cfg.get("provider") not in PROVIDERS:
+        raise ConfigError(f"llm.provider phải thuộc {PROVIDERS}")
     model = cfg.get("model")
     if not isinstance(model, str) or not model.strip():
         raise ConfigError("llm.model chưa được đặt (nhóm chốt model)")
@@ -103,7 +104,7 @@ def load_llm_settings(cfg: dict[str, Any] | None = None) -> LLMSettings:
     if evidence.min_quote_chars > evidence.max_quote_chars:
         raise ConfigError("evidence.min_quote_chars không được lớn hơn max_quote_chars")
     return LLMSettings(
-        provider="anthropic",
+        provider=cfg["provider"],
         model=model.strip(),
         effort=cfg["effort"],
         max_tokens=_bounded(cfg.get("max_tokens"), "llm.max_tokens", 256, 128_000),

@@ -1,9 +1,16 @@
 # Thiết lập LLM dùng chung cho cấu hình A/B/C (spec mục 14, 16). Provider/model/tham số do nhóm chốt.
 # Các giá trị dưới đây là ĐỀ XUẤT khởi điểm của Claude (2026-10-24), nhóm đổi trước khi chạy đánh giá;
 # thay đổi chúng làm hash của freeze (spec mục 15.1) lệch.
-provider: anthropic
-model: claude-opus-5-5
-# Mức nỗ lực suy luận (output_config.effort): low | medium | high | xhigh | max. Claude Opus 5.5 mặc định medium.
+#
+# provider: anthropic | gemini. Từ 2026-10-24 nhóm chọn `gemini` (hạn mức miễn phí) để CHẠY THỬ pipeline.
+# Đổi provider/model là đổi cấu hình đánh giá: A/B/C phải dùng cùng một provider/model đã chốt trước
+# khi đóng băng (xem DEVIATIONS_FROM_MIDTERM.md). Muốn quay lại Claude: provider: anthropic,
+# model: claude-opus-5-5, api_key_env: ANTHROPIC_API_KEY.
+provider: gemini
+# Model có hạn mức miễn phí trên Google AI Studio; nhóm kiểm lại danh sách/hạn mức tại ai.google.dev.
+model: gemini-2.5-flash
+# Mức nỗ lực suy luận (output_config.effort): low | medium | high | xhigh | max. Chỉ gửi cho anthropic;
+# gemini bỏ qua (dùng thinking mặc định của model), nhưng giá trị vẫn nằm trong khóa cache.
 effort: medium
 # Gồm cả token suy luận của mô hình, nên để dư so với JSON trả về.
 max_tokens: 8000
@@ -14,7 +21,13 @@ timeout_s: 180
 # mô hình, và `run_id` nằm trong khóa cache nên 3 lần chạy không trùng cache.
 
 # API key CHỈ đọc từ biến môi trường có tên này, không bao giờ ghi trong file.
-api_key_env: ANTHROPIC_API_KEY
+api_key_env: GEMINI_API_KEY
+
+# Chỉ dùng khi provider: gemini. Hạn mức free giới hạn số lời gọi/phút: lỗi 429/500/503 được gọi lại
+# sau backoff_s × (lần thử) giây, tối đa rate_limit_retries lần.
+gemini:
+  rate_limit_retries: 3
+  backoff_s: 20
 
 cache_dir: cache/llm
 # File nhật ký mỗi lần gọi (JSONL: token, độ trễ, cache hit, trạng thái). Rỗng = chỉ giữ trong bộ nhớ.

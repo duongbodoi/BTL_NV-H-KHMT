@@ -1,6 +1,7 @@
 """Lớp bọc LLM mỏng (spec mục 16): structured output bắt buộc, cache đĩa, log token/độ trễ.
 
-Không agent framework. Mọi test dùng `Transport` giả; chỉ `AnthropicTransport` mới gọi mạng.
+Không agent framework. Mọi test dùng `Transport` giả; chỉ `AnthropicTransport`/`GeminiTransport` mới
+gọi mạng (chọn theo `llm.provider` qua `make_transport`).
 Khóa cache gồm `run_id` (3 lần chạy không trùng cache) và cả prompt, schema, model, effort.
 Không gửi temperature/top_p/top_k (API từ chối).
 """
@@ -344,3 +345,128 @@ class AnthropicTransport:
             stop_reason=getattr(resp, "stop_reason", None),
             request_id=getattr(resp, "_request_id", None),
         )
+
+
+# (status HTTP, thân phản hồi). Tách ra để test thay bằng hàm giả, không gọi mạng.
+HttpPost = Callable[[str, dict[str, str], bytes, float], tuple[int, str]]
+
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+# finishReason của Gemini → stop_reason mà LLMClient hiểu; lý do khác giữ nguyên (client báo lỗi).
+_GEMINI_STOP = {
+    "STOP": "end_turn",
+    "MAX_TOKENS": "max_tokens",
+    "SAFETY": "refusal",
+    "PROHIBITED_CONTENT": "refusal",
+    "BLOCKLIST": "refusal",
+    "SPII": "refusal",
+}
+_GEMINI_RETRY_STATUS = (429, 500, 503)
+
+
+def _urllib_post(
+    url: str, headers: dict[str, str], body: bytes, timeout_s: float
+) -> tuple[int, str]:
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # noqa: S310 - URL cố định
+            return resp.status, resp.read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", errors="replace")
+
+
+class GeminiTransport:
+    """Gọi Gemini API (REST `generateContent`, chỉ dùng thư viện chuẩn) với structured output
+    (`responseMimeType: application/json` + `responseJsonSchema`).
+
+    Dùng để chạy thử bằng hạn mức miễn phí. `effort` KHÔNG được gửi (Gemini dùng cấu hình
+    thinking riêng, để mặc định của model). Không gửi temperature/top_p/top_k. Lỗi 429/500/503
+    (hạn mức free rất thấp) được gọi lại sau `backoff_s` giây, tối đa `rate_limit_retries` lần.
+    CHƯA được thử với API thật trong repo này (test chỉ dùng hàm HTTP giả).
+    """
+
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        rate_limit_retries: int = 0,
+        backoff_s: float = 0.0,
+        post: HttpPost = _urllib_post,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self._key = api_key
+        self._retries = rate_limit_retries
+        self._backoff = backoff_s
+        self._post = post
+        self._sleep = sleep
+
+    @classmethod
+    def from_env(cls, llm_cfg: dict[str, Any]) -> GeminiTransport:
+        g = llm_cfg.get("gemini") or {}
+        if not isinstance(g, dict):
+            raise ConfigError("llm.gemini phải là mapping")
+        retries, backoff = g.get("rate_limit_retries", 0), g.get("backoff_s", 0)
+        if isinstance(retries, bool) or not isinstance(retries, int) or retries < 0:
+            raise ConfigError("llm.gemini.rate_limit_retries phải là số nguyên >= 0")
+        if isinstance(backoff, bool) or not isinstance(backoff, (int, float)) or backoff < 0:
+            raise ConfigError("llm.gemini.backoff_s phải là số >= 0")
+        key = get_api_key(llm_cfg)  # chỉ từ biến môi trường
+        return cls(key, rate_limit_retries=retries, backoff_s=float(backoff))
+
+    def complete(
+        self,
+        *,
+        model: str,
+        system: str,
+        user: str,
+        schema: dict[str, Any],
+        max_tokens: int,
+        effort: str,
+        timeout_s: float,
+    ) -> RawCompletion:
+        body = {
+            "systemInstruction": {"parts": [{"text": system}]},
+            "contents": [{"role": "user", "parts": [{"text": user}]}],
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "responseJsonSchema": schema,
+                "maxOutputTokens": max_tokens,
+            },
+        }
+        headers = {"Content-Type": "application/json", "x-goog-api-key": self._key}
+        data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        url = GEMINI_URL.format(model=model)
+        for attempt in range(self._retries + 1):
+            status, text = self._post(url, headers, data, timeout_s)
+            if status not in _GEMINI_RETRY_STATUS or attempt == self._retries:
+                break
+            self._sleep(self._backoff * (attempt + 1))
+        if status != 200:
+            raise LLMError(f"Gemini HTTP {status}: {text[:300]}")
+        resp = json.loads(text)
+        usage = resp.get("usageMetadata") or {}
+        # token suy luận (thoughts) cũng tính tiền đầu ra, như token suy luận của Claude
+        t_in = int(usage.get("promptTokenCount", 0))
+        t_out = int(usage.get("candidatesTokenCount", 0)) + int(usage.get("thoughtsTokenCount", 0))
+        rid = resp.get("responseId")
+        cands = resp.get("candidates") or []
+        if not cands:  # prompt bị chặn: không có ứng viên, chỉ có promptFeedback.blockReason
+            return RawCompletion("", t_in, t_out, "refusal", rid)
+        cand = cands[0]
+        parts = (cand.get("content") or {}).get("parts") or []
+        out = "".join(p.get("text", "") for p in parts if not p.get("thought"))
+        reason = cand.get("finishReason")
+        stop = _GEMINI_STOP.get(reason, str(reason).lower() if reason else None)
+        return RawCompletion(out, t_in, t_out, stop, rid)
+
+
+def make_transport(llm_cfg: dict[str, Any]) -> Transport:
+    """Transport thật theo `llm.provider` (anthropic | gemini). Key chỉ đọc từ biến môi trường."""
+    provider = llm_cfg.get("provider")
+    if provider == "anthropic":
+        return AnthropicTransport.from_env(llm_cfg)
+    if provider == "gemini":
+        return GeminiTransport.from_env(llm_cfg)
+    raise ConfigError(f"llm.provider không hỗ trợ: {provider!r}")

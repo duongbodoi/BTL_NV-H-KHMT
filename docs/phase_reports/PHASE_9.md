@@ -85,3 +85,17 @@ Không. Mã công ty đọc từ `configs/dataset.yaml` (chỉ để **chặn** 
 ## 10. Khác báo cáo giữa kỳ
 
 Không thêm điểm lệch mới (LLM phân loại bằng chứng ở bước 3 đã nằm trong các điểm đã chốt, spec mục 26.2).
+
+## 11. Bổ sung 2026-10-24: provider Gemini (để chạy thử miễn phí)
+
+Nhóm chọn Gemini (hạn mức free của Google AI Studio) để chạy thử pipeline trước khi chi tiền.
+
+- `llm/client.py`: thêm `GeminiTransport` (REST `generateContent`, chỉ dùng thư viện chuẩn, không thêm phụ thuộc) và `make_transport(llm_cfg)` chọn theo `llm.provider`. Ba script `run_text_evidence.py`, `run_verdicts.py`, `run_report.py` dùng `make_transport`.
+- Structured output: `responseMimeType: application/json` + `responseJsonSchema` (schema giữ nguyên; code vẫn kiểm lại). Phần "thought" bị bỏ khỏi văn bản; `thoughtsTokenCount` cộng vào token đầu ra. `finishReason` STOP → `end_turn`, MAX_TOKENS → `max_tokens`, SAFETY/PROHIBITED_CONTENT/BLOCKLIST/SPII và prompt bị chặn → `refusal`; lý do khác → client báo lỗi.
+- `effort` **không gửi** cho Gemini (dùng thinking mặc định của model). Không gửi temperature/top_p/top_k.
+- Lỗi 429/500/503 gọi lại theo `llm.gemini.rate_limit_retries`/`backoff_s`; lỗi khác (400...) báo ngay. Độ trễ ghi trong log vì vậy gồm cả thời gian chờ.
+- `configs/llm.yaml`: `provider: gemini`, `model: gemini-2.5-flash`, `api_key_env: GEMINI_API_KEY`.
+- Test: 9 test mới với hàm HTTP giả (không gọi mạng).
+- **Chưa thử với API thật.** Tên trường `responseJsonSchema` đúng theo tài liệu Google mà Claude biết, nhưng trang tham chiếu hiện tại Claude đọc được không hiển thị phần `GenerationConfig`; nếu lần gọi đầu trả HTTP 400 về schema thì báo lại để sửa.
+- Hạn mức free: dữ liệu gửi lên có thể được Google dùng để cải thiện sản phẩm (theo trang giá). Chỉ gửi BCTC công khai.
+- Kết quả chạy bằng Gemini **không thay** cho cấu hình đánh giá chính thức nếu nhóm chốt model khác; xem `DEVIATIONS_FROM_MIDTERM.md`.

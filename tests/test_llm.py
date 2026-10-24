@@ -13,6 +13,7 @@ from steel_xai.config import ConfigError, load_config
 from steel_xai.contracts import Anomaly, Check, Evidence, Hypothesis, Provenance, TextCheckStatus
 from steel_xai.llm import (
     AnthropicTransport,
+    GeminiTransport,
     LLMClient,
     LLMError,
     LLMOutputError,
@@ -24,6 +25,7 @@ from steel_xai.llm import (
     classify_passages,
     gather_text_evidence,
     load_llm_settings,
+    make_transport,
     prompt_fingerprint,
     rephrase_queries,
     verify_quote,
@@ -79,7 +81,7 @@ GOOD = {"judgements": [{"chunk_id": "c1", "label": "irrelevant", "quote": "", "r
 
 def test_repo_config_loads_and_never_sends_sampling_params():
     s = load_llm_settings()
-    assert s.provider == "anthropic" and s.model and s.max_tokens >= 256
+    assert s.provider in ("anthropic", "gemini") and s.model and s.max_tokens >= 256
     assert s.evidence.min_quote_chars < s.evidence.max_quote_chars
     for key in ("temperature", "top_p", "top_k"):
         bad = copy.deepcopy(CFG)
@@ -301,6 +303,131 @@ def test_anthropic_transport_needs_env_key_and_package(monkeypatch):
     monkeypatch.setitem(sys.modules, "anthropic", None)  # import fails
     with pytest.raises(ConfigError, match="anthropic"):
         AnthropicTransport.from_env(CFG)
+
+
+# ---------------- GeminiTransport (hàm HTTP giả)
+
+
+def _gemini_reply(text='{"ok": true}', finish="STOP", status=200, **extra):
+    body = {
+        "candidates": [
+            {
+                "content": {"parts": [{"text": "nghĩ...", "thought": True}, {"text": text}]},
+                "finishReason": finish,
+            }
+        ],
+        "usageMetadata": {"promptTokenCount": 11, "candidatesTokenCount": 7,
+                          "thoughtsTokenCount": 5},
+        "responseId": "resp_x",
+        **extra,
+    }  # fmt: skip
+    return status, json.dumps(body)
+
+
+class FakePost:
+    def __init__(self, *replies):
+        self.replies = list(replies)
+        self.calls = []
+
+    def __call__(self, url, headers, body, timeout_s):
+        self.calls.append((url, headers, json.loads(body.decode("utf-8")), timeout_s))
+        return self.replies.pop(0) if len(self.replies) > 1 else self.replies[0]
+
+
+SCHEMA0 = {"type": "object", "properties": {}, "required": [], "additionalProperties": False}
+
+
+def _gcomplete(tr, **kw):
+    args = dict(model="gemini-x", system="s", user="u", schema=SCHEMA0, max_tokens=500,
+                effort="low", timeout_s=30.0)  # fmt: skip
+    args.update(kw)
+    return tr.complete(**args)
+
+
+def test_gemini_transport_request_shape_and_parsing():
+    post = FakePost(_gemini_reply())
+    raw = _gcomplete(GeminiTransport("khoa-thu-nghiem", post=post))
+    url, headers, body, timeout = post.calls[0]
+    assert url.endswith("/models/gemini-x:generateContent") and timeout == 30.0
+    assert headers["x-goog-api-key"] == "khoa-thu-nghiem" and "khoa" not in url
+    assert body["systemInstruction"] == {"parts": [{"text": "s"}]}
+    assert body["contents"] == [{"role": "user", "parts": [{"text": "u"}]}]
+    gc = body["generationConfig"]
+    assert gc == {"responseMimeType": "application/json", "responseJsonSchema": SCHEMA0,
+                  "maxOutputTokens": 500}  # fmt: skip
+    for forbidden in ("temperature", "topP", "topK", "thinkingConfig"):
+        assert forbidden not in gc
+    # phần "thought" bị bỏ; token suy luận tính vào đầu ra
+    assert (raw.text, raw.input_tokens, raw.output_tokens) == ('{"ok": true}', 11, 12)
+    assert raw.stop_reason == "end_turn" and raw.request_id == "resp_x"
+
+
+@pytest.mark.parametrize(
+    ("finish", "stop"),
+    [("MAX_TOKENS", "max_tokens"), ("SAFETY", "refusal"), ("PROHIBITED_CONTENT", "refusal"),
+     ("RECITATION", "recitation")],
+)  # fmt: skip
+def test_gemini_finish_reasons_map_to_client_stop_reasons(finish, stop):
+    raw = _gcomplete(GeminiTransport("k", post=FakePost(_gemini_reply(finish=finish))))
+    assert raw.stop_reason == stop
+
+
+def test_gemini_blocked_prompt_is_a_refusal_through_the_client():
+    body = {"promptFeedback": {"blockReason": "SAFETY"}, "usageMetadata": {"promptTokenCount": 3}}
+    tr = GeminiTransport("k", post=FakePost((200, json.dumps(body))))
+    assert _gcomplete(tr).stop_reason == "refusal"
+    with pytest.raises(LLMRefusalError):
+        LLMClient(settings(), tr).call(REQ)
+
+
+def test_gemini_retries_rate_limit_then_succeeds_and_gives_up_on_other_errors():
+    slept = []
+    post = FakePost((429, "quota"), (503, "busy"), _gemini_reply())
+    tr = GeminiTransport("k", rate_limit_retries=3, backoff_s=2, post=post, sleep=slept.append)
+    assert _gcomplete(tr).text == '{"ok": true}'
+    assert len(post.calls) == 3 and slept == [2, 4]
+    # hết lượt thử
+    tr = GeminiTransport(
+        "k", rate_limit_retries=1, post=FakePost((429, "quota")), sleep=slept.append
+    )
+    with pytest.raises(LLMError, match="429"):
+        _gcomplete(tr)
+    # 400 không gọi lại
+    post = FakePost((400, "bad schema"))
+    with pytest.raises(LLMError, match="400"):
+        _gcomplete(GeminiTransport("k", rate_limit_retries=3, post=post, sleep=slept.append))
+    assert len(post.calls) == 1
+
+
+def test_gemini_end_to_end_through_client_validates_schema(tmp_path):
+    reply = json.dumps(GOOD, ensure_ascii=False)
+    tr = GeminiTransport("k", post=FakePost(_gemini_reply(text=reply)))
+    res = LLMClient(settings(tmp_path), tr).call(REQ)
+    assert res.data == GOOD and res.record.billed_output_tokens == 12
+    bad = GeminiTransport("k", post=FakePost(_gemini_reply(text="không phải json")))
+    with pytest.raises(LLMOutputError):
+        LLMClient(settings(), bad).call(REQ)
+
+
+def test_make_transport_picks_provider_and_reads_key_only_from_env(monkeypatch):
+    monkeypatch.setitem(sys.modules, "anthropic", _fake_anthropic({}))
+    cfg = copy.deepcopy(CFG)
+    monkeypatch.setenv(cfg["api_key_env"], "k")
+    for provider, cls in (("gemini", GeminiTransport), ("anthropic", AnthropicTransport)):
+        cfg["provider"] = provider
+        assert isinstance(make_transport(cfg), cls)
+    cfg["provider"] = "openai"
+    with pytest.raises(ConfigError, match="provider"):
+        make_transport(cfg)
+    cfg["provider"] = "gemini"
+    monkeypatch.delenv(cfg["api_key_env"])
+    with pytest.raises(ConfigError, match=cfg["api_key_env"]):
+        make_transport(cfg)
+    monkeypatch.setenv(cfg["api_key_env"], "k")
+    for bad in ({"rate_limit_retries": -1}, {"backoff_s": "x"}, ["x"]):
+        cfg["gemini"] = bad
+        with pytest.raises(ConfigError, match="gemini"):
+            make_transport(cfg)
 
 
 # ---------------- kiểm trích dẫn nguyên văn

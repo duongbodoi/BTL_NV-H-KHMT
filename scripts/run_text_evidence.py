@@ -18,7 +18,7 @@ from steel_xai.anomaly import detect_anomalies, load_anomaly_settings
 from steel_xai.anomaly.corpus import asof_from_corpus, find_documents, load_corpus
 from steel_xai.config import load_all_configs, load_config
 from steel_xai.hypotheses import load_library
-from steel_xai.llm import AnthropicTransport, LLMClient, gather_text_evidence, load_llm_settings
+from steel_xai.llm import LLMClient, gather_text_evidence, load_llm_settings, make_transport
 from steel_xai.normalization import load_normalization_settings, normalize
 from steel_xai.retrieval import BM25Retriever, build_chunks
 from steel_xai.validation import load_validation_settings, validate_facts
@@ -71,7 +71,7 @@ def main(argv: list[str]) -> int:
         return 0
 
     llm_cfg = load_config("llm")
-    client = LLMClient(load_llm_settings(llm_cfg), AnthropicTransport.from_env(llm_cfg))
+    client = LLMClient(load_llm_settings(llm_cfg), make_transport(llm_cfg))
     load_all_configs()  # kiểm mọi config hợp lệ trước khi tiêu token
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8", newline="\n") as f:

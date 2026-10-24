@@ -461,3 +461,20 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+## 2026-10-24 — Phase 9 bổ sung: provider Gemini
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:**
+- Theo yêu cầu của nhóm (chạy thử bằng API miễn phí): thêm `GeminiTransport` + `make_transport` trong `llm/client.py`, cho `llm.provider` nhận `gemini`, chuyển 3 script sang `make_transport`, đổi `configs/llm.yaml` sang `gemini-2.5-flash` / `GEMINI_API_KEY`, thêm 9 test với HTTP giả.
+- Tra trang giá và tham chiếu API của Google (2026-10-24): `gemini-2.5-flash` còn hạn mức free; `generateContent`, `responseId`, `thoughtsTokenCount` còn trong tài liệu.
+
+**Lỗi/sai sót bắt được:** không có ở phần code mới; 8 test đang fail trước đó vẫn fail vì thư viện giả thuyết (`reviewed_by` rỗng, thiếu danh mục nguồn), không liên quan.
+
+**Phần người cần tự xác minh:**
+- Lần gọi thật đầu tiên: kiểm không có HTTP 400 về `responseJsonSchema`; đọc vài kết quả phân loại.
+- Chốt provider/model cho đánh giá chính thức.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

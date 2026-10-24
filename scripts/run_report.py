@@ -82,10 +82,10 @@ def main(argv: list[str]) -> int:
 
     client = None
     if args.call_api:
-        from steel_xai.llm import AnthropicTransport, LLMClient, load_llm_settings
+        from steel_xai.llm import LLMClient, load_llm_settings, make_transport
 
         llm_cfg = load_config("llm")
-        client = LLMClient(load_llm_settings(llm_cfg), AnthropicTransport.from_env(llm_cfg))
+        client = LLMClient(load_llm_settings(llm_cfg), make_transport(llm_cfg))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     mode = "a" if args.anomaly else "w"  # lọc theo bất thường: không ghi đè log của các ca khác

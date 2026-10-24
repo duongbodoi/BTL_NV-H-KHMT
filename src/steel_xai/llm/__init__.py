@@ -4,6 +4,7 @@ bằng chứng, kiểm trích dẫn nguyên văn bằng code. Mọi test dùng t
 from steel_xai.llm.client import (
     AnthropicTransport,
     CallRecord,
+    GeminiTransport,
     LLMClient,
     LLMError,
     LLMOutputError,
@@ -14,6 +15,7 @@ from steel_xai.llm.client import (
     Transport,
     UsageTotals,
     cache_key,
+    make_transport,
 )
 from steel_xai.llm.evidence import (
     DroppedEvidence,
@@ -29,6 +31,7 @@ from steel_xai.llm.settings import EvidenceSettings, LLMSettings, load_llm_setti
 __all__ = [
     "AnthropicTransport",
     "CallRecord",
+    "GeminiTransport",
     "DroppedEvidence",
     "EvidenceSettings",
     "LLMClient",
@@ -44,6 +47,7 @@ __all__ = [
     "Transport",
     "UsageTotals",
     "cache_key",
+    "make_transport",
     "canonical",
     "classify_passages",
     "gather_text_evidence",

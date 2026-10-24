@@ -66,15 +66,15 @@ def main(argv: list[str]) -> int:
     client = None
     if args.with_text:
         from steel_xai.llm import (
-            AnthropicTransport,
             LLMClient,
             gather_text_evidence,
             load_llm_settings,
+            make_transport,
         )
         from steel_xai.retrieval import BM25Retriever, build_chunks
 
         llm_cfg = load_config("llm")
-        client = LLMClient(load_llm_settings(llm_cfg), AnthropicTransport.from_env(llm_cfg))
+        client = LLMClient(load_llm_settings(llm_cfg), make_transport(llm_cfg))
         retriever = BM25Retriever(build_chunks(ocr, asof=asof).chunks)
 
         def text_fn(h, a):  # noqa: F811

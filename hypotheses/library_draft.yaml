@@ -83,7 +83,7 @@ hypotheses:
         - dự trữ nguyên liệu
         - tích trữ
         - giá nguyên liệu thấp
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_capacity_expansion
@@ -175,7 +175,7 @@ hypotheses:
         queries:
         - dự án bị hoãn
         - dừng dự án
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_weak_demand
@@ -274,7 +274,7 @@ hypotheses:
         - nhu cầu yếu
         - sức mua giảm
         - trích lập dự phòng
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_seasonality
@@ -308,7 +308,7 @@ hypotheses:
         polarity: contradict
         queries:
         - tồn kho không mang tính mùa vụ
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_price_not_volume
@@ -370,7 +370,7 @@ hypotheses:
         polarity: contradict
         queries:
         - số lượng tồn kho tăng
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_accounting_policy_change
@@ -405,7 +405,7 @@ hypotheses:
         polarity: contradict
         queries:
         - chính sách hàng tồn kho nhất quán với năm trước
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_goods_in_transit_timing
@@ -466,7 +466,7 @@ hypotheses:
           op: <
           value: 0.05
           abs: true
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: margin_selling_price
@@ -535,7 +535,7 @@ hypotheses:
         queries:
         - giá bán
         - điều chỉnh giá bán
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: margin_input_cost_lag
@@ -607,7 +607,7 @@ hypotheses:
         queries:
         - giá nguyên liệu
         - chi phí đầu vào
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: margin_inventory_cost_effect
@@ -692,7 +692,7 @@ hypotheses:
         - hàng tồn kho giá cao
         - giá vốn cao
         - nguyên liệu giá rẻ
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: margin_inventory_provision
@@ -755,7 +755,7 @@ hypotheses:
         queries:
         - trích lập dự phòng
         - hoàn nhập dự phòng
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: margin_product_market_mix
@@ -801,7 +801,7 @@ hypotheses:
         polarity: contradict
         queries:
         - cơ cấu sản phẩm không thay đổi đáng kể
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: margin_capacity_utilization
@@ -864,7 +864,7 @@ hypotheses:
           op: <
           value: 0.03
           abs: true
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: margin_new_project_depreciation
@@ -932,7 +932,7 @@ hypotheses:
         polarity: contradict
         queries:
         - không có dự án lớn hoàn thành trong kỳ
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: margin_trade_policy_fx
@@ -1006,7 +1006,7 @@ hypotheses:
         polarity: contradict
         queries:
         - không có biện pháp phòng vệ thương mại mới
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   # ---------- Tồn kho giảm bất thường (direction: down) ----------
@@ -1088,7 +1088,7 @@ hypotheses:
         queries:
         - tiêu thụ tăng
         - đơn hàng tăng
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_active_destocking
@@ -1179,7 +1179,7 @@ hypotheses:
         - tối ưu hàng tồn kho
         - hạn chế mua mới
         - kiểm soát hàng tồn kho
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_production_cut
@@ -1271,7 +1271,7 @@ hypotheses:
           op: <
           value: 0.03
           abs: true
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_price_decline_value
@@ -1338,7 +1338,7 @@ hypotheses:
         queries:
         - số lượng tồn kho
         - sản lượng tồn kho
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_writedown_provision
@@ -1422,7 +1422,7 @@ hypotheses:
         polarity: support
         queries:
         - trích lập dự phòng giảm giá hàng tồn kho
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_clearance_discount
@@ -1491,7 +1491,7 @@ hypotheses:
         - giảm giá bán
         - cạnh tranh đầu ra
         - giải phóng hàng tồn kho
-    status: draft
+    status: reviewed
     reviewed_by: null
 
   - id: inventory_goods_in_transit_timing_down
@@ -1539,5 +1539,5 @@ hypotheses:
           op: <
           value: 0.05
           abs: true
-    status: draft
+    status: reviewed
     reviewed_by: null
