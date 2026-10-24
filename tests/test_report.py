@@ -36,7 +36,7 @@ from steel_xai.report import (
     report_prompt_fingerprint,
     skeleton_report,
 )
-from steel_xai.report.numbers import matches_value
+from steel_xai.report.numbers import display_step, matches_value
 from steel_xai.report.prompts import REPORT_SCHEMA
 from steel_xai.verification.analyze import AnomalyAnalysis
 from steel_xai.verification.verdict import rank_verdicts, verify_hypothesis
@@ -210,14 +210,16 @@ def tok(text):
         ("12,3%", {D("12.3")}, "pct", False),
         ("1.234,5 tỷ đồng", {D("1234.5")}, "scaled", False),
         ("(700)", {D("700")}, "plain", True),
-        ("-5,2 điểm %", {D("5.2")}, "pct", True),
-        ("0.25", {D("0.25")}, "plain", False),
-        ("1.250", {D("1250"), D("1.250")}, "plain", False),  # mơ hồ: cả hai ứng viên
-        ("1,250", {D("1250"), D("1.250")}, "plain", False),
-        ("1,234,567.8", {D("1234567.8")}, "plain", False),
+        ("-5,2 điểm %", {D("5.2")}, "pp", True),
+        ("3 điểm phần trăm", {D("3")}, "pp", False),
+        ("0.25", set(), "plain", False),  # kiểu Anh: không có cách đọc hợp lệ
+        ("1.250", {D("1250")}, "plain", False),  # chỉ đọc kiểu Việt
+        ("1,250", {D("1.250")}, "plain", False),
+        ("1,234,567.8", set(), "plain", False),
         ("45,3 ngày", {D("45.3")}, "days", False),
         ("gấp 2,5 lần", {D("2.5")}, "times", False),
         ("42,1 nghìn tỷ", {D("42.1")}, "scaled", False),
+        ("tăng 150tỷ đồng", {D("150")}, "scaled", False),  # đơn vị dính liền vẫn được đọc
     ],
 )
 def test_extract_vietnamese_numbers(text, values, kind, negative):
@@ -246,14 +248,37 @@ def test_extract_skips_numbers_glued_to_words_and_splits_year_ranges():
         ("42,1 nghìn tỷ đồng", D("42134500000000"), "vnd", True),
         ("43.000 tỷ đồng", D("42134500000000"), "vnd", False),
         ("42.134,5 tỷ đồng", D("0.42"), "ratio", False),  # sai đơn vị
-        ("15,6 điểm %", D("-15.60969"), "pp", True),  # chỉ so độ lớn
+        ("15,6 điểm %", D("-15.60969"), "pp", True),  # không dấu: so độ lớn
+        ("-15,6 điểm %", D("-15.60969"), "pp", True),
+        ("-15,6 điểm %", D("15.60969"), "pp", False),  # có dấu trừ: phải đúng dấu
+        ("(15,6) điểm %", D("15.60969"), "pp", False),
+        ("15,6%", D("-15.60969"), "pp", False),  # "%" không phải "điểm %"
         ("15,6 ngày", D("-15.60969"), "pp", False),
         ("105,5 điểm %", D("1.055428"), "ratio_diff", True),
+        ("105,5%", D("1.055428"), "ratio_diff", False),
+        ("12,3 điểm %", D("0.12345"), "ratio", False),
         ("2,5 lần", D("1.5"), "ratio", False),  # không quy đổi "lần"
+        ("12.3%", D("0.123"), "ratio", False),  # kiểu Anh
     ],
 )
 def test_number_matching(text, value, unit, ok):
     assert matches_value(tok(text), value, unit, TOL) is ok
+
+
+@pytest.mark.parametrize(
+    ("text", "value", "unit", "ok"),
+    [
+        ("12,3%", D("0.12345"), "ratio", True),
+        ("12,35%", D("0.12345"), "ratio", True),  # chi tiết hơn display: được
+        ("12%", D("0.12345"), "ratio", False),  # thô hơn display "12,3%"
+        ("0,12", D("0.12345"), "ratio", False),
+        ("1.400,0 tỷ đồng", D("1.4e12"), "vnd", True),
+        ("1 nghìn tỷ đồng", D("1.4e12"), "vnd", False),
+        ("1,4 nghìn tỷ đồng", D("1.4e12"), "vnd", False),
+    ],
+)
+def test_number_may_not_be_coarser_than_display(text, value, unit, ok):
+    assert matches_value(tok(text), value, unit, TOL, display_step(value, unit)) is ok
 
 
 def test_display_string_always_matches_its_own_value():
@@ -430,11 +455,23 @@ def test_good_draft_passes_every_check():
         (1, "Đây là cơ hội đầu tư, nhà đầu tư nên mua cổ phiếu.", "forbidden_investment_advice"),
         (1, "Có dấu hiệu gian lận trong số liệu.", "forbidden_fraud"),
         (1, "Dữ liệu chắc chắn cho thấy giá giảm.", "forbidden_certainty"),
-        (
-            5,
-            "Khấu hao tăng là nguyên nhân làm biên gộp giảm.",
-            "unhedged_causal",
-        ),  # h_dep UNVERIFIED
+        (0, "Biên lợi nhuận gộp giảm do khấu hao tăng.", "unhedged_causal"),
+        (0, "Biên lợi nhuận gộp giảm vì giá bán giảm.", "unhedged_causal"),
+        (0, "Giá bán giảm khiến biên lợi nhuận gộp thu hẹp.", "unhedged_causal"),
+        (0, "Giá bán giảm kéo theo biên lợi nhuận gộp giảm.", "unhedged_causal"),
+        (0, "Có thể thấy giá bán là nguyên nhân chính.", "unhedged_causal"),
+        (1, "Nhà đầu tư nên cân nhắc mua cổ phiếu.", "forbidden_investment_advice"),
+        (1, "Cổ phiếu có tiềm năng tăng giá.", "forbidden_investment_advice"),
+        (1, "Công ty thổi phồng doanh thu.", "forbidden_fraud"),
+        (1, "Doanh nghiệp làm đẹp báo cáo tài chính.", "forbidden_fraud"),
+        (2, "GM-1 có trạng thái PARTIAL.", "status_mismatch"),
+        (5, "GM-7 đã được xác thực, thiếu cip FY2022.", "status_mismatch"),
+        (2, "GM-1 đạt 0/1 check critical.", "numeric_mismatch"),
+        (2, "GM-1 xếp hạng 2.", "numeric_mismatch"),
+        (0, "Biên lợi nhuận gộp tăng 15,6 điểm %.", "numeric_mismatch"),  # sai chiều
+        (0, "Biên lợi nhuận gộp giảm 15,6%.", "numeric_mismatch"),  # % thay vì điểm %
+        (0, "Biên lợi nhuận gộp giảm 16 điểm %.", "numeric_mismatch"),  # thô hơn display
+        (0, "Biên lợi nhuận gộp giảm 15.6 điểm %.", "numeric_mismatch"),  # kiểu Anh
         (6, "Biên gộp giảm vì giá bán giảm.", "unconditional_conclusion"),
     ],
 )
@@ -670,3 +707,87 @@ def test_claim_parsing_dedupes_sources_and_strips():
         }
     )
     assert c == Claim("anomaly", "h", "x", ("N1",))
+
+
+# ---------------- hồi quy theo review độc lập
+
+
+@pytest.mark.parametrize(
+    ("idx", "text"),
+    [
+        (1, "Báo cáo này không kết luận gian lận; giá HRC giảm 11,2%."),
+        (1, "Chưa thể khẳng định chắc chắn; giá HRC giảm 11,2%."),
+        (1, "Công ty có cơ hội đầu tư mở rộng công suất; giá HRC giảm 11,2%."),
+        (1, "Sản lượng bán ra ổn định; giá HRC giảm 11,2%."),
+        (1, "Nguyên liệu mua vào khi giá thấp; giá HRC giảm 11,2%."),
+        (1, "Công ty mua cổ phiếu quỹ; giá HRC giảm 11,2%."),
+        (5, "GM-7 chưa kiểm được vì thiếu cip FY2022, chưa được xác thực."),
+        (2, "GM-1 xếp hạng 1, đạt 1/1 check critical, trạng thái SUPPORTED."),
+    ],
+)
+def test_benign_sentences_are_not_rejected(idx, text):
+    i = inp()
+    claims = good_claims(i)
+    claims[idx]["text"] = text
+    chk = run_check(i, claims)
+    assert chk.accepted, chk.violations
+
+
+def test_evidence_number_must_belong_to_the_claimed_hypothesis():
+    i = inp()
+    claims = good_claims(i)
+    claims[4]["sources"].append(num_id(i, "price_down: hrc_price"))  # số của h_price
+    assert "wrong_hypothesis_source" in kinds(run_check(i, claims))
+
+
+def test_dates_and_years_must_belong_to_the_input():
+    i = inp()
+    for text, ok in [
+        ("Biên lợi nhuận gộp giảm -15,6 điểm %, as-of 16/03/2023.", True),
+        ("Biên lợi nhuận gộp giảm -15,6 điểm %, as-of 16/03/2099.", False),
+        ("Biên lợi nhuận gộp giảm -15,6 điểm % trong 2022.", True),
+        ("Giá thép đạt 2022 USD/tấn, biên gộp giảm -15,6 điểm %.", False),
+    ]:
+        claims = good_claims(i)
+        claims[0]["text"] = text
+        assert run_check(i, claims).accepted is ok, text
+
+
+def test_literal_numbers_need_the_same_unit():
+    from steel_xai.report.numbers import matches_literal
+
+    (src,) = extract_numbers("chỉ có 2 peer")
+    assert matches_literal(tok("2"), src, TOL)
+    assert not matches_literal(tok("2 ngày"), src, TOL)
+    assert not matches_literal(tok("2 lần"), extract_numbers("2 lần")[0], TOL)
+    (pct,) = extract_numbers("giảm 11%")
+    assert matches_literal(tok("11%"), pct, TOL) and not matches_literal(tok("11"), pct, TOL)
+
+
+def test_skeleton_lists_quantitative_check_results_per_hypothesis():
+    md = skeleton_report(inp(), S)
+    assert "Kết quả check định lượng (do code tính):" in md
+    assert "hrc_price = -11,2%" in md and "(đạt, ủng hộ)" in md
+    assert "hrc_price (2021-12..2022-11, USD/tấn)" in md
+
+
+def test_retry_prompt_carries_attempt_number_and_claims_are_single_line():
+    i = inp()
+    bad = good_claims(i)
+    bad[0]["text"] = "Biên lợi nhuận gộp giảm -16,1 điểm %."
+    good = good_claims(i)
+    good[0]["text"] = "Biên lợi nhuận gộp FY2022 thay đổi\n## giả -15,6 điểm %."
+    c, t = client(reply(bad), reply(good))
+    res = generate_report(i, c, S, "r1")
+    assert "LẦN VIẾT THỨ 2" in t.calls[1]["user"]
+    assert res.status == "accepted_after_retry"
+    assert "\n## giả" not in res.markdown
+
+
+def test_drop_failing_respects_max_claims():
+    i = inp()
+    many = good_claims(i) * 3
+    many[0] = {**many[0], "text": "Nhà đầu tư nên mua cổ phiếu."}
+    c, _ = client(reply(many))
+    res = generate_report(i, c, settings(on_exhausted="drop_failing", max_claims=5), "r1")
+    assert res.status == "rejected" and len(res.claims) == 5

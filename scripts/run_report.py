@@ -88,7 +88,8 @@ def main(argv: list[str]) -> int:
         client = LLMClient(load_llm_settings(llm_cfg), AnthropicTransport.from_env(llm_cfg))
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    with (out_dir / "reports.jsonl").open("w", encoding="utf-8", newline="\n") as log:
+    mode = "a" if args.anomaly else "w"  # lọc theo bất thường: không ghi đè log của các ca khác
+    with (out_dir / "reports.jsonl").open(mode, encoding="utf-8", newline="\n") as log:
         for a in anomalies:
             ctx = context_from_anomaly(a, store, external, v_settings, asof_by)
             analysis = analyze_anomaly(

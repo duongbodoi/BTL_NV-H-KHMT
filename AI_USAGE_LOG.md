@@ -436,3 +436,28 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+## 2026-10-24 — Phase 11 (Grounded report)
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Bối cảnh:** Phase 10 chưa COMPLETED; phần còn lại của nó là việc của nhóm (xác nhận luật, duyệt giả thuyết) và không đổi cấu trúc dữ liệu báo cáo dùng. Nhóm đồng ý làm tiếp Phase 11.
+
+**Việc Claude đã làm:**
+- Audit-first: `src/steel_xai/report/` trống; dùng lại client LLM, kiểm schema và cách băm prompt của Phase 9, verdict của Phase 10.
+- `report/{settings,numbers,facts,prompts,checks,render,generate}.py`, `configs/report.yaml`, `scripts/run_report.py` (mặc định không gọi API), `tests/test_report.py` (120 test, LLM giả).
+- Chạy chế độ không gọi API trên 11 bất thường thật; đối chiếu vài số hiển thị với BCTC (tồn kho HPG 2021 42.134,5 tỷ, doanh thu thuần HPG 2022 141.409,3 tỷ).
+
+**Lỗi/sai sót bắt được:**
+- Lỗi của chính Claude khi chạy thử: lý do thiếu dữ liệu chứa số thô chưa định dạng; tưởng `thresholds_hit` có giá trị ngưỡng (không có); hiệu hai tỷ lệ hiển thị "%" dễ hiểu nhầm (thêm đơn vị `ratio_diff` = "điểm %"); dung sai tương đối ban đầu quá rộng.
+- Review độc lập (subagent): 0 CRITICAL, 3 HIGH, 10 MEDIUM, 5 LOW; đã sửa tất cả trừ một LOW (xem `PHASE_11.md` mục 4). Đáng chú ý: số kiểu Anh qua sai 1000 lần, trạng thái/tỷ số critical sai không bị bắt, bộ lọc nhân quả bỏ sót "do/vì/khiến", lẫn "%" với "điểm %".
+
+**Phần người cần tự xác minh:**
+- Gọi API thật trên vài ca dev (`python scripts/run_report.py --call-api --anomaly "..."`): đọc báo cáo, xem tỷ lệ bị từ chối ở bản nháp đầu và lý do; nếu bị từ chối oan nhiều thì chỉnh mẫu trong `configs/report.yaml` TRƯỚC khi đóng băng test.
+- Đọc lại danh sách mẫu cấm/nhân quả/rào đón/cụm trạng thái trong `configs/report.yaml` (do Claude đề xuất), thử thêm câu tiếng Việt thực tế.
+- Chốt `top_k`, `max_attempts`, `on_exhausted`, đơn vị và nhãn chỉ báo.
+- Spot-check vài số trong `data/processed/reports/*.md` với BCTC gốc.
+- Hiểu rằng bộ kiểm chỉ bắt lỗi số/nguồn/trạng thái/từ cấm; ý nghĩa câu vẫn cần người chấm (citation support rate).
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

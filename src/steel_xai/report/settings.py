@@ -12,6 +12,9 @@ from steel_xai.config import ConfigError, load_config
 UNITS = ("ratio", "ratio_diff", "pp", "days", "z", "vnd", "number")
 ON_EXHAUSTED = ("skeleton_only", "drop_failing")
 FORBIDDEN_GROUPS = ("investment_advice", "fraud", "certainty")
+# Thứ tự xét cụm từ trạng thái tiếng Việt (cụm dài/phủ định trước, để "chưa được xác thực" không bị
+# đọc thành "được xác thực").
+STATUS_ORDER = ("UNVERIFIED", "PARTIAL", "CONTRADICTED", "SUPPORTED")
 
 
 @dataclass(frozen=True)
@@ -25,7 +28,9 @@ class ReportSettings:
     exempt_patterns: tuple[re.Pattern[str], ...]
     indicator_units: dict[str, str]
     tool_units: dict[str, str]
-    ratio_metrics: frozenset[str]
+    fact_units: dict[str, str]
+    series_units: dict[str, str]
+    status_phrases: dict[str, tuple[re.Pattern[str], ...]]
     indicator_labels: dict[str, str]
     forbidden: dict[str, tuple[re.Pattern[str], ...]]
     causal: tuple[re.Pattern[str], ...]
@@ -80,9 +85,12 @@ def load_report_settings(cfg: dict[str, Any] | None = None) -> ReportSettings:
     labels = cfg.get("indicator_labels") or {}
     if not isinstance(labels, dict):
         raise ConfigError("report.indicator_labels phải là mapping")
-    ratio_metrics = cfg.get("ratio_metrics") or []
-    if not isinstance(ratio_metrics, list):
-        raise ConfigError("report.ratio_metrics phải là danh sách")
+    series_units = cfg.get("series_units") or {}
+    if not isinstance(series_units, dict):
+        raise ConfigError("report.series_units phải là mapping")
+    phrases = cfg.get("status_phrases") or {}
+    if not isinstance(phrases, dict) or not set(phrases) <= set(STATUS_ORDER):
+        raise ConfigError(f"report.status_phrases phải là mapping với khóa thuộc {STATUS_ORDER}")
     return ReportSettings(
         top_k=_int(cfg.get("top_k"), "top_k", 1),
         max_attempts=_int(cfg.get("max_attempts"), "max_attempts", 1),
@@ -90,10 +98,13 @@ def load_report_settings(cfg: dict[str, Any] | None = None) -> ReportSettings:
         max_claims=_int(cfg.get("max_claims"), "max_claims", 1),
         max_claim_chars=_int(cfg.get("max_claim_chars"), "max_claim_chars", 20),
         relative_tolerance=tol,
-        exempt_patterns=_patterns(nums.get("exempt_patterns"), "numbers.exempt_patterns"),
+        # phân biệt hoa/thường: mã như "N3" không được xóa "n3" (thêm (?i) trong mẫu nếu cần)
+        exempt_patterns=_patterns(nums.get("exempt_patterns"), "numbers.exempt_patterns", 0),
         indicator_units=_units(cfg.get("indicator_units"), "indicator_units"),
         tool_units=_units(cfg.get("tool_units"), "tool_units"),
-        ratio_metrics=frozenset(str(m) for m in ratio_metrics),
+        fact_units=_units(cfg.get("fact_units") or {}, "fact_units"),
+        series_units={str(k): str(v) for k, v in series_units.items()},
+        status_phrases={k: _patterns(v, f"status_phrases.{k}") for k, v in phrases.items()},
         indicator_labels={str(k): str(v) for k, v in labels.items()},
         forbidden={g: _patterns(forb[g], f"forbidden.{g}") for g in FORBIDDEN_GROUPS},
         causal=_patterns(cfg.get("causal"), "causal"),

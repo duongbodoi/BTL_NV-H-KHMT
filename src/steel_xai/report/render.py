@@ -18,6 +18,14 @@ _TITLES = {
 }
 
 
+_CHECK_ROLES = {
+    "support": "đạt, ủng hộ",
+    "failed": "không đạt",
+    "contradict": "phản bác",
+    "input": "đầu vào",
+}
+
+
 def _cell(text: object) -> str:
     return str(text).replace("|", "\\|").replace("\n", " ")
 
@@ -105,7 +113,19 @@ def render_report(
     for v in inp.verdicts:
         mine = [c for c in by_section["evidence"] if c.hypothesis_id == v.hypothesis_id]
         out += ["", f"### {_hyp_name(v)} — {v.status}", ""]
-        out += [_claim_line(c) for c in mine] or ["- (không có khẳng định nào được chấp nhận)"]
+        quant = [
+            n for n in inp.numbers if n.hypothesis_id == v.hypothesis_id and n.role in _CHECK_ROLES
+        ]
+        if quant:
+            out.append("Kết quả check định lượng (do code tính):")
+            for n in quant:
+                out.append(
+                    f"- [{n.id}] `{n.check_id}` ({_CHECK_ROLES[n.role]}): "
+                    f"{n.label.split(': ')[-1]} = {n.display}"
+                )
+                shown.add(n.id)
+            out.append("")
+        out += [_claim_line(c) for c in mine] or ["- (không có khẳng định diễn giải nào)"]
     if general:
         out += ["", *(_claim_line(c) for c in general)]
 

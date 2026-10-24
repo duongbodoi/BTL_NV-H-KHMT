@@ -77,13 +77,13 @@ REPORT_SCHEMA: dict[str, Any] = {
 }
 
 
-def report_user(input_json: str, feedback: list[str] | None = None) -> str:
+def report_user(input_json: str, feedback: list[str] | None = None, attempt: int = 1) -> str:
     parts = ["DỮ LIỆU ĐÃ KIỂM CHỨNG (JSON):", input_json]
     if feedback:
         parts += [
             "",
-            "BẢN NHÁP TRƯỚC BỊ BỘ KIỂM TỪ CHỐI vì các lỗi sau. Viết lại TOÀN BỘ danh sách khẳng "
-            "định, sửa hết các lỗi này:",
+            f"LẦN VIẾT THỨ {attempt}. BẢN NHÁP TRƯỚC BỊ BỘ KIỂM TỪ CHỐI vì các lỗi sau. Viết lại "
+            "TOÀN BỘ danh sách khẳng định, sửa hết các lỗi này:",
             *(f"- {x}" for x in feedback),
         ]
     return "\n".join(parts)
@@ -96,7 +96,7 @@ def report_prompt_fingerprint() -> str:
             "v": REPORT_PROMPT_VERSION,
             "system": REPORT_SYSTEM,
             "schema": REPORT_SCHEMA,
-            "user_template": report_user("{input}", ["{feedback}"]),
+            "user_template": report_user("{input}", ["{feedback}"], 2),
         },
         ensure_ascii=False,
         sort_keys=True,

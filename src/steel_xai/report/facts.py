@@ -77,14 +77,6 @@ class VerdictItem:
     supporting_passed: int
     has_verified_text: bool
 
-    @property
-    def literal_text(self) -> str:
-        """Các số mà khẳng định dẫn mã H được phép nhắc tới."""
-        return (
-            f"hạng {self.rank}; critical {self.critical_passed}/{self.critical_total}; "
-            f"supporting {self.supporting_passed}"
-        )
-
 
 @dataclass(frozen=True)
 class ReportInput:
@@ -138,6 +130,7 @@ class ReportInput:
                 {
                     "id": v.id,
                     "hypothesis_id": v.hypothesis_id,
+                    "code": v.code,
                     "claim": v.claim,
                     "status": v.status,
                     "rank": v.rank,
@@ -216,12 +209,15 @@ class _Builder:
         if key in self._input_ids:
             return
         if inp.kind == "fact":
-            unit = "ratio" if inp.name in self.s.ratio_metrics else "vnd"
+            unit = self.s.fact_units.get(inp.name, "vnd")
+            label = f"{inp.name} ({inp.period})"
         else:
             unit = "number"
+            series_unit = self.s.series_units.get(inp.name)
+            label = f"{inp.name} ({inp.period}" + (f", {series_unit})" if series_unit else ")")
         self.years |= _years(inp.period)
         self._input_ids[key] = self.number(
-            f"{inp.name} ({inp.period})",
+            label,
             inp.value,
             unit,
             _input_source(inp),

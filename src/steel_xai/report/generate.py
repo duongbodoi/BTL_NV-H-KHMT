@@ -101,7 +101,7 @@ def generate_report(
             purpose=PURPOSE,
             run_id=run_id,
             system=REPORT_SYSTEM,
-            user=report_user(payload, feedback),
+            user=report_user(payload, feedback, n),
             schema=REPORT_SCHEMA,
         )
         try:
@@ -125,7 +125,7 @@ def generate_report(
     else:
         status = "llm_error" if error else "rejected"
         if settings.on_exhausted == "drop_failing" and last is not None:
-            claims = last.passing_claims()
+            claims = last.passing_claims()[: settings.max_claims]
             note = (
                 f"Bản nháp của LLM không qua bộ kiểm sau {len(attempts)} lần; chỉ giữ các "
                 "khẳng định đã qua mọi kiểm."
