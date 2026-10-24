@@ -395,3 +395,44 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+## 2026-10-24 — Phase 10 (Hypothesis verification / ranking)
+
+**Công cụ:** Claude Code (Claude Sonnet 5.5).
+
+**Bối cảnh:** nhóm yêu cầu làm Phase 10 khi Phase 6, 8, 9 chưa COMPLETED và thư viện chưa có giả thuyết `reviewed`. Claude đã nêu điều này.
+
+**Việc Claude đã làm:**
+- Audit-first: `verification/` đã có Phase 8; chưa có hàm gộp check hay xếp hạng. Đọc lại bảng 12.1 và 12.2 của spec; ghi lại các chỗ spec để ngỏ (FAIL của check critical, check văn bản không tìm thấy, hòa hạng) thay vì chọn ngầm.
+- `contracts.VerdictStatus/CheckFinding/HypothesisVerdict`; `verification/{verdict,analyze}.py`; khối `verdict` trong `configs/verification.yaml`; `scripts/run_verdicts.py`; `tests/test_verdict.py` (golden test từng trạng thái, xếp hạng/hòa, bất biến ngẫu nhiên).
+- Chạy thử trên dữ liệu thật (chỉ định lượng, không gọi API) để xem luật có hợp lý không.
+
+**Lỗi/sai sót bắt được:**
+- Lỗi của chính Claude: lần đầu chọn "FAIL của check critical-support luôn là CONTRADICTED"; trên dữ liệu thật 30/83 verdict thành CONTRADICTED, nên review (và số liệu thật) cho thấy nó quá khắc nghiệt khi ngưỡng check chưa được duyệt. Đã đổi thành chính sách có cấu hình, mặc định `if_none_pass`.
+- Review độc lập (subagent): 0 CRITICAL, 0 HIGH, 5 MEDIUM, 6 LOW; fuzz 60.000 ca không vi phạm bất biến nào. Đã sửa tỷ lệ critical không nhất quán với SUPPORTED, check văn bản FOUND không có bằng chứng, `check_id` không đối chiếu, guard giả thuyết draft, mã hóa script trên Windows, và đánh dấu kết quả chạy thử (`used_drafts`).
+- Trong bản test đầu có lỗi fixture của Claude (hai check dùng cùng một tool nên đều PASS), không phải lỗi code; đã sửa.
+
+**Phần người cần tự xác minh:**
+- **Xác nhận ba lựa chọn luật** (xem `PHASE_10.md`): chính sách FAIL critical, check văn bản critical-contradict chưa kiểm được, cách hòa hạng và cách Hit@k/MRR dùng `rank`.
+- **Duyệt giả thuyết và `checks`** (đánh dấu `reviewed`); đến lúc đó mới có kết quả đo được. Lần chạy thử hiện tại chỉ để xem, **không** dùng cho metric.
+- Cân nhắc yêu cầu từ hai nguồn trở lên cho nhãn `contradict` của LLM nếu thấy giả thuyết bị hạ oan.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-
+
+## 2026-10-24 — Phase 8: nhập giá HRC và than cốc (VSA)
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:**
+- Đọc `Giá nguyên vật liệu.xlsx` của nhóm và đối chiếu với các chuỗi giá mà thư viện cần. Kết luận: dùng được cho `hrc_price` và `coking_coal_price` (2019–2022); không dùng được phôi thép (6 tháng); phế liệu chưa có giả thuyết nào dùng.
+- Sau khi nhóm đồng ý: chuyển file thành `data/external/vsa_prices.xlsx`; thêm tùy chọn `midpoint_ranges`/`trailing_empty_ok` (mặc định tắt) cho importer và CLI; sinh hai CSV; thêm test; chạy lại `run_quant_checks.py` và `run_verdicts.py`, cập nhật `EXTERNAL_DATA.md`, `PHASE_8.md`, `PHASE_10.md`.
+
+**Lỗi/sai sót bắt được:** một test mới của Claude kỳ vọng sai thông báo lỗi ở chế độ chặt (ô chữ trước dữ liệu bị coi là tiêu đề nên lỗi là "không có dòng dữ liệu"); đã sửa test, code không đổi.
+
+**Phần người cần tự xác minh:**
+- Đối chiếu vài tháng trong CSV với bài gốc trên VSA; bổ sung link bài từng tháng nếu cần cho data card.
+- Cách lấy trung bình ô khoảng giá đã được nhóm chốt; lưu ý giá trị là "giá đầu tháng" chứ không phải trung bình tháng.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

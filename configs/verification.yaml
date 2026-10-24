@@ -34,3 +34,18 @@ contra_metrics: [inventory_provision]
 # Check dùng chúng ra NOT_EVALUABLE tới khi trích thêm; tên nằm ở đây để bắt lỗi gõ sai tên metric.
 # (accounts_payable, goods_in_transit, depreciation, inventory_change_cf đã được trích từ 2026-10-24.)
 planned_metrics: [inventory_provision_charge, segment_revenue, export_revenue_share, production_volume, cip_transfer_to_fixed_assets]
+
+# Luật gộp check -> trạng thái giả thuyết (spec mục 12). Chỉ các lựa chọn mà spec để ngỏ.
+verdict:
+  # Check văn bản critical + polarity contradict mà KHÔNG tìm thấy bằng chứng: có chặn SUPPORTED không?
+  # false: không chặn (văn bản không chứng minh được sự vắng mặt; nếu true thì check loại này không
+  # bao giờ SUPPORTED được). Chỗ trống vẫn nằm trong `missing` của kết quả.
+  text_critical_contradict_unknown_blocks: false
+  # Check critical-support bị FAIL (dữ liệu đã tính ra, kỳ vọng quan trọng không xảy ra) có tính là
+  # bằng chứng chống lại không? Spec mục 12.1 không nói rõ; lựa chọn này ảnh hưởng thứ hạng:
+  #   never        : không bao giờ (chỉ check polarity contradict hoặc đoạn văn bị gán contradict mới
+  #                  làm CONTRADICTED); FAIL chỉ khiến giả thuyết không SUPPORTED được
+  #   if_none_pass : CONTRADICTED chỉ khi KHÔNG còn check critical-support nào đạt (mặc định);
+  #                  còn đạt một phần thì PARTIAL
+  #   always       : mọi FAIL critical-support đều làm CONTRADICTED
+  critical_support_fail_policy: if_none_pass

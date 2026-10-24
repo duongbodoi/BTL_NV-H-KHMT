@@ -91,6 +91,37 @@ def test_bad_rows_fail_the_whole_import_with_row_number(tmp_path, rows, needle):
         monthly_series_from_xlsx(p)
 
 
+def test_midpoint_ranges_and_unit_suffix_only_when_enabled(tmp_path):
+    p = tmp_path / "p.xlsx"
+    make_xlsx(p, [("Tháng", "Giá"), ("2020-01", "458-462 USD/T,"), ("2020-02", "484 USD/T")])
+    with pytest.raises(PriceImportError, match="không có dòng dữ liệu"):
+        monthly_series_from_xlsx(p)  # mặc định vẫn chặt: ô chữ chỉ được coi là tiêu đề
+    got = monthly_series_from_xlsx(p, midpoint_ranges=True)
+    assert got == [("2020-01", D(460)), ("2020-02", D(484))]
+    make_xlsx(p, [("2020-01", "438 - 441")])
+    assert monthly_series_from_xlsx(p, midpoint_ranges=True) == [("2020-01", D("439.5"))]
+
+
+@pytest.mark.parametrize("cell", ["462-458", "khoảng 460", "460-", "-460", "460 EUR/T"])
+def test_midpoint_ranges_rejects_reversed_or_unknown_cells(tmp_path, cell):
+    p = tmp_path / "p.xlsx"
+    make_xlsx(p, [("2020-01", 1), ("2020-02", cell)])
+    with pytest.raises(PriceImportError, match="dòng 2"):
+        monthly_series_from_xlsx(p, midpoint_ranges=True)
+
+
+def test_trailing_empty_rows_skipped_only_at_the_end(tmp_path):
+    p = tmp_path / "p.xlsx"
+    make_xlsx(p, [("2020-01", 1), ("2020-02", 2), ("2020-03", None), ("2020-04", None)])
+    with pytest.raises(PriceImportError, match="thiếu ngày hoặc giá"):
+        monthly_series_from_xlsx(p)
+    got = monthly_series_from_xlsx(p, trailing_empty_ok=True)
+    assert [m for m, _ in got] == ["2020-01", "2020-02"]
+    make_xlsx(p, [("2020-01", 1), ("2020-02", None), ("2020-03", 3)])
+    with pytest.raises(PriceImportError, match="dòng 2 thiếu giá"):
+        monthly_series_from_xlsx(p, trailing_empty_ok=True)
+
+
 def test_not_an_xlsx_and_empty_workbook(tmp_path):
     bad = tmp_path / "x.xlsx"
     bad.write_text("không phải zip", encoding="utf-8")
@@ -122,13 +153,34 @@ def test_team_iron_ore_csv_matches_the_xlsx_and_is_sane():
     assert from_xlsx == data
 
 
+@pytest.mark.parametrize(("name", "col"), [("hrc_price", "C"), ("coking_coal_price", "E")])
+def test_team_vsa_csvs_match_the_xlsx(name, col):
+    """Bảng VSA của nhóm (giá đầu tháng, USD/tấn): ô khoảng giá lấy trung bình hai đầu."""
+    data = read_series_csv(REPO / "data" / "external" / f"{name}.csv")
+    assert len(data) == 48 and min(data) == (2019, 1) and max(data) == (2022, 12)
+    assert all(D(50) < v < D(1500) for v in data.values())
+    rows = monthly_series_from_xlsx(
+        REPO / "data" / "external" / "vsa_prices.xlsx",
+        value_col=col,
+        midpoint_ranges=True,
+        trailing_empty_ok=True,
+    )
+    assert {tuple(map(int, m.split("-"))): v for m, v in rows} == data
+
+
+def test_team_hrc_midpoint_spot_values():
+    data = read_series_csv(REPO / "data" / "external" / "hrc_price.csv")
+    assert data[(2019, 11)] == D(439)  # "438-440"
+    assert data[(2021, 5)] == D(925)
+
+
 def test_team_iron_ore_series_drives_real_checks():
     """Có giá thật: check chuỗi giá chạy được cho cả công ty năm tài chính lệch lịch."""
     from steel_xai.verification import ExternalStore, load_verification_settings
 
     settings = load_verification_settings()
     store = ExternalStore.load(settings)
-    assert store.has("iron_ore_price") and not store.has("hrc_price")
+    assert store.has("iron_ore_price") and not store.has("steel_price")
     inv = facts_for("HPG", "inventory_total", {2021: 100, 2022: 150})
     c = ctx(inv, company="HPG", settings=settings, external=store)
     # HPG FY2022 (kết thúc 12/2022): trung bình 2022 so với 2021, lag 0 → tính tay từ CSV
@@ -139,7 +191,10 @@ def test_team_iron_ore_series_drives_real_checks():
     assert float(got) == pytest.approx(float(expected), rel=1e-9)
     # chuỗi chưa có file vẫn NOT_EVALUABLE
     not_evaluable(
-        "lagged_external_series", {"series": "hrc_price", "lag": 0}, c, "chưa có dữ liệu chuỗi giá"
+        "lagged_external_series",
+        {"series": "steel_price", "lag": 0},
+        c,
+        "chưa có dữ liệu chuỗi giá",
     )
 
 

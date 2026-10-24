@@ -4,6 +4,10 @@ Chỉ dùng thư viện chuẩn (xlsx là file zip XML). Sheet đầu tiên, c�
 Ngày chấp nhận: `2015M01` (World Bank Pink Sheet), `2015-01`, `2015-01-31`, `2015/01`, hoặc số ngày
 của Excel. Dòng tiêu đề (cột giá không phải số) bị bỏ qua; mọi dòng dữ liệu khác phải hợp lệ, nếu
 không cả lần nhập lỗi, không đọc dở.
+
+Tùy chọn (mặc định tắt) cho bảng tổng hợp tay từ tin VSA: `midpoint_ranges` nhận ô `458-462` (lấy
+trung bình hai đầu) và hậu tố đơn vị `USD/T`; `trailing_empty_ok` bỏ qua các dòng chỉ có ngày ở
+CUỐI bảng (dòng trống xen giữa vẫn lỗi).
 """
 
 from __future__ import annotations
@@ -22,6 +26,8 @@ _NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 _PINK = re.compile(r"(\d{4})M(\d{2})")
 _YM = re.compile(r"(\d{4})[-/](\d{2})(?:[-/](\d{2}))?")
 _EXCEL_EPOCH = dt.date(1899, 12, 30)
+_NUM = r"(\d+(?:\.\d+)?)"
+_RANGE_CELL = re.compile(rf"{_NUM}(?:\s*-\s*{_NUM})?\s*(?:USD\s*/\s*T(?:ấn)?)?\s*,?", re.IGNORECASE)
 
 
 class PriceImportError(ValueError):
@@ -90,24 +96,51 @@ def _month_of(raw: str) -> tuple[int, int]:
     return y, mth
 
 
+def _parse_value(raw: str, midpoint_ranges: bool) -> Decimal | None:
+    """Giá trong ô; None nếu không phải số (dòng tiêu đề hoặc ô sai)."""
+    if midpoint_ranges:
+        m = _RANGE_CELL.fullmatch(raw)
+        if not m:
+            return None
+        lo, hi = Decimal(m.group(1)), Decimal(m.group(2) or m.group(1))
+        if hi < lo:
+            raise ValueError(f"khoảng giá ngược: {raw!r}")
+        return (lo + hi) / 2
+    try:
+        return Decimal(raw)
+    except InvalidOperation:
+        return None
+
+
 def monthly_series_from_xlsx(
-    path: str | Path, date_col: str = "A", value_col: str = "B"
+    path: str | Path,
+    date_col: str = "A",
+    value_col: str = "B",
+    *,
+    midpoint_ranges: bool = False,
+    trailing_empty_ok: bool = False,
 ) -> list[tuple[str, Decimal]]:
     """[(YYYY-MM, giá)] theo thứ tự thời gian từ sheet đầu của file xlsx."""
     out: dict[tuple[int, int], Decimal] = {}
     seen_data = False
+    pending_empty: int | None = None  # dòng đầu tiên chỉ có ngày, chờ xem có phải đuôi bảng
     for i, row in enumerate(read_xlsx_rows(path), start=1):
         raw_date, raw_val = row.get(date_col), row.get(value_col)
         if raw_val is None and raw_date is None:
             continue
         try:
-            value = Decimal(raw_val) if raw_val is not None else None
-        except InvalidOperation:
-            value = None
+            value = _parse_value(raw_val, midpoint_ranges) if raw_val is not None else None
+        except ValueError as e:
+            raise PriceImportError(f"{Path(path).name} dòng {i}: {e}") from e
         if value is None and not seen_data:
             continue  # dòng tiêu đề
         seen_data = True
+        if trailing_empty_ok and raw_val is None and raw_date is not None:
+            pending_empty = pending_empty or i
+            continue
         try:
+            if pending_empty is not None:
+                raise ValueError(f"dòng {pending_empty} thiếu giá nhưng sau đó còn dữ liệu")
             if raw_date is None or value is None:
                 raise ValueError("thiếu ngày hoặc giá")
             if not value.is_finite() or value <= 0 or value > MAX_PRICE:

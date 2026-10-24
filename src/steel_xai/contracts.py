@@ -458,3 +458,120 @@ class TextCheckStatus(StrEnum):
     FOUND = "FOUND"  # có bằng chứng đã kiểm, đúng chiều của check
     MISSING = "MISSING"  # LLM nêu bằng chứng nhưng trích dẫn không qua kiểm nguyên văn → bị loại
     UNVERIFIED = "UNVERIFIED"  # không truy xuất/không có đoạn phù hợp, hoặc không đánh giá được
+
+
+class VerdictStatus(StrEnum):
+    """Trạng thái kiểm chứng của một giả thuyết (spec mục 12.1). Do luật trong code quyết định."""
+
+    SUPPORTED = "SUPPORTED"
+    PARTIAL = "PARTIAL"
+    CONTRADICTED = "CONTRADICTED"
+    UNVERIFIED = "UNVERIFIED"
+
+
+FINDING_OUTCOMES = ("satisfied", "not_satisfied", "unknown")
+
+
+@dataclass(frozen=True)
+class CheckFinding:
+    """Kết quả của một check đã quy về cùng một thang, kèm bằng chứng gốc.
+
+    `outcome` theo ngữ nghĩa của check: với check polarity `support`, satisfied = có bằng chứng ủng
+    hộ; với polarity `contradict`, satisfied = quan sát được bằng chứng chống lại. `unknown` = thiếu
+    dữ liệu/không kiểm được (không phải bằng chứng gì cả). `text` là bằng chứng văn bản đã qua kiểm
+    trích dẫn (có thể có cả chiều ngược với polarity của check).
+    """
+
+    check_id: str
+    kind: str
+    importance: str
+    polarity: str
+    outcome: str
+    detail: str = ""
+    quant: CheckResult | None = None
+    text: tuple[Evidence, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.outcome not in FINDING_OUTCOMES:
+            raise ValueError(f"outcome phải thuộc {FINDING_OUTCOMES}, nhận {self.outcome!r}")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "check_id": self.check_id,
+            "kind": self.kind,
+            "importance": self.importance,
+            "polarity": self.polarity,
+            "outcome": self.outcome,
+            "detail": self.detail,
+            "quant": None if self.quant is None else self.quant.to_dict(),
+            "text": [e.to_dict() for e in self.text],
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> CheckFinding:
+        return cls(
+            check_id=d["check_id"],
+            kind=d["kind"],
+            importance=d["importance"],
+            polarity=d["polarity"],
+            outcome=d["outcome"],
+            detail=d.get("detail", ""),
+            quant=None if d.get("quant") is None else CheckResult.from_dict(d["quant"]),
+            text=tuple(Evidence.from_dict(e) for e in d.get("text", ())),
+        )
+
+
+@dataclass(frozen=True)
+class HypothesisVerdict:
+    """Kết luận kiểm chứng cho một giả thuyết (spec mục 18).
+
+    `evidence`: các check có bằng chứng ỦNG HỘ; `contradictions`: bằng chứng CHỐNG LẠI; `missing`:
+    check không kiểm được. Một check có thể xuất hiện ở hai danh sách khi bằng chứng văn bản của nó
+    có cả hai chiều. `rank` do hàm xếp hạng gán (hòa thì chia chung hạng); None khi chưa xếp hạng.
+    """
+
+    hypothesis_id: str
+    status: VerdictStatus
+    rank: int | None = None
+    evidence: tuple[CheckFinding, ...] = ()
+    contradictions: tuple[CheckFinding, ...] = ()
+    missing: tuple[CheckFinding, ...] = ()
+    failed: tuple[CheckFinding, ...] = ()
+    critical_total: int = 0
+    critical_passed: int = 0
+    supporting_passed: int = 0
+
+    @property
+    def has_verified_text(self) -> bool:
+        """Có ít nhất một đoạn văn bản đã qua kiểm trích dẫn trong phần ủng hộ."""
+        return any(e.polarity == "support" for f in self.evidence for e in f.text)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "hypothesis_id": self.hypothesis_id,
+            "status": self.status.value,
+            "rank": self.rank,
+            "evidence": [f.to_dict() for f in self.evidence],
+            "contradictions": [f.to_dict() for f in self.contradictions],
+            "missing": [f.to_dict() for f in self.missing],
+            "failed": [f.to_dict() for f in self.failed],
+            "has_verified_text": self.has_verified_text,
+            "critical_total": self.critical_total,
+            "critical_passed": self.critical_passed,
+            "supporting_passed": self.supporting_passed,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> HypothesisVerdict:
+        return cls(
+            hypothesis_id=d["hypothesis_id"],
+            status=VerdictStatus(d["status"]),
+            rank=d.get("rank"),
+            evidence=tuple(CheckFinding.from_dict(f) for f in d.get("evidence", ())),
+            contradictions=tuple(CheckFinding.from_dict(f) for f in d.get("contradictions", ())),
+            missing=tuple(CheckFinding.from_dict(f) for f in d.get("missing", ())),
+            failed=tuple(CheckFinding.from_dict(f) for f in d.get("failed", ())),
+            critical_total=d.get("critical_total", 0),
+            critical_passed=d.get("critical_passed", 0),
+            supporting_passed=d.get("supporting_passed", 0),
+        )

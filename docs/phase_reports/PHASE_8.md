@@ -7,12 +7,12 @@
 
 ## ⚠ Điều nhóm cần biết
 
-- **Dữ liệu giá mới có quặng sắt** (`data/external/iron_ore_price.xlsx` của nhóm → `iron_ore_price.csv`, 120 tháng 2015-01..2024-12, $/dmtu). Các chuỗi `hrc_price`, `steel_price`, `coking_coal_price`, `usd_vnd` chưa có nên check dùng chúng vẫn `NOT_EVALUABLE`. Vì chuỗi bắt đầu từ 2015-01, các ca FY2015–FY2016 thường thiếu tháng cho cửa sổ so sánh (ví dụ "chỉ có 6/12 tháng"): nên bổ sung giá từ 2014 nếu muốn dùng các năm đầu. Nhập từ Excel: `scripts/import_price_xlsx.py`, xem `docs/EXTERNAL_DATA.md`.
+- **Dữ liệu giá mới có quặng sắt** (`data/external/iron_ore_price.xlsx` của nhóm → `iron_ore_price.csv`, 120 tháng 2015-01..2024-12, $/dmtu). **Cập nhật 2026-10-24:** thêm `hrc_price` và `coking_coal_price` từ bảng VSA của nhóm (`data/external/vsa_prices.xlsx`, 2019-01..2022-12, USD/tấn, ô khoảng giá lấy trung bình; xem mục 3c). `steel_price`, `usd_vnd` chưa có nên check dùng chúng vẫn `NOT_EVALUABLE`. Vì chuỗi bắt đầu từ 2015-01, các ca FY2015–FY2016 thường thiếu tháng cho cửa sổ so sánh (ví dụ "chỉ có 6/12 tháng"): nên bổ sung giá từ 2014 nếu muốn dùng các năm đầu. Nhập từ Excel: `scripts/import_price_xlsx.py`, xem `docs/EXTERNAL_DATA.md`.
 - **Độ trễ giá (`lag_months`: 3, 3, 1, 1, 0) và `publication_lag_days: 35` là đề xuất khởi điểm của Claude**, không phải quyết định của nhóm (spec mục 10, "có độ trễ"; mục 7.2). Cần chốt theo vòng quay tồn kho và nguồn thật.
 - **Các ngưỡng `pass_when` trong `library_draft.yaml` (±20%, 0,33, 0,67, 0,3...) vẫn là phỏng đoán của Claude**; Phase 8 chỉ thực thi chúng, không kiểm chúng đúng. Nhóm rà trước khi duyệt giả thuyết.
 - **Hướng của giả thuyết:** mỗi giả thuyết khai `direction` (`up | down | both`) và chỉ chạy trên bất thường cùng hướng (`hypothesis_applies`). Thư viện nhóm cập nhật 2026-10-24 đã có 7 giả thuyết tồn kho GIẢM (DEC-1..7), nên cả hai hướng của tồn kho đều có giả thuyết. Giả thuyết chưa khai `direction` không áp dụng cho hướng nào.
 - **Chỉ tiêu Phase 3 đã trích thêm (2026-10-24, chỉ sửa `configs/normalization.yaml`):** `accounts_payable` (mã 311), `goods_in_transit` (dòng thuyết minh hàng tồn kho), `depreciation` và `inventory_change_cf` (báo cáo lưu chuyển tiền tệ; nhận diện bảng bằng nhãn "Lưu chuyển tiền thuần từ hoạt động kinh doanh" vì bảng của NKG không có cột mã số). Fact cũ giữ nguyên 100% (so sánh trước/sau trên 29 tài liệu); giá trị đối chiếu tay với OCR gốc (HPG 2021–2022, HSG 2021–2022) khớp. **Chưa trích được:** NKG cho hai chỉ tiêu lưu chuyển tiền tệ (OCR gộp dòng trong bảng NKG), HSG cho `accounts_payable`/`goods_in_transit` từ 2019 (header hai tầng), và `inventory_provision_charge`, `segment_revenue`, `export_revenue_share`, `production_volume`, `cip_transfer_to_fixed_assets` (cần báo cáo thường niên hoặc không có dạng bảng đơn giản): các check dùng chúng vẫn `NOT_EVALUABLE`.
-- Trên dữ liệu thật sau cập nhật (22 giả thuyết, 11 bất thường): 248 kết quả check = 88 PASS, 61 FAIL, 99 NOT_EVALUABLE (phần lớn do thiếu các chuỗi giá còn lại và chỉ tiêu chưa trích).
+- Trên dữ liệu thật sau cập nhật (22 giả thuyết, 11 bất thường): 248 kết quả check = 88 PASS, 61 FAIL, 99 NOT_EVALUABLE (phần lớn do thiếu các chuỗi giá còn lại và chỉ tiêu chưa trích). Sau khi thêm HRC và than cốc: **93 PASS, 64 FAIL, 91 NOT_EVALUABLE** (mục 3c).
 
 ## Phase này để làm gì?
 
@@ -40,6 +40,13 @@ Bước 3a của pipeline (spec mục 6, 10.2): biến các `checks` quant của
 ## 3. Thay đổi `hypotheses/library_draft.yaml` (chỉ phần `checks` do Claude đề xuất)
 
 Review phát hiện vài check ngữ nghĩa sai; đã chỉnh trong khối `checks` (nội dung nhóm viết không đổi): INV-1 và GM-1 dùng `any: true` cho "quặng sắt **hoặc** HRC" / "HRC hoặc thép xây dựng"; GM-3 `input_price_moved` đổi sang `signed_by_anomaly_direction` (giá đầu vào đổi cùng chiều biên gộp, bỏ `abs` để khỏi lẫn với GM-2); GM-4 `provision_charge_large` thêm `numerator_mode: level` (chi phí trích lập là dòng chảy, so với mức thay đổi lợi nhuận gộp); GM-7 `cip_transfer_*` dùng `denominator_period: prior_year_end` (luồng trong năm / số dư đầu kỳ). Nhóm nên đọc lại các check này.
+
+## 3c. Cập nhật 2026-10-24 (giá HRC và than cốc từ VSA)
+
+- Nhóm thêm `Giá nguyên vật liệu.xlsx` (chuyển thành `data/external/vsa_prices.xlsx`), xác nhận "thép cuộn" = HRC và chọn **trung bình hai đầu** cho ô khoảng giá. Importer có hai tùy chọn mới, mặc định tắt: `midpoint_ranges` (ô `a-b`, hậu tố `USD/T`; khoảng ngược hoặc chữ lạ vẫn lỗi) và `trailing_empty_ok` (chỉ bỏ dòng thiếu giá ở **cuối** bảng). Test mới trong `tests/test_price_import.py`, có test CSV khớp xlsx.
+- 8 check đổi từ `NOT_EVALUABLE`: 5 → PASS, 3 → FAIL, đều ở FY2021–FY2022 (HPG FY2021/FY2022, HSG FY2022, NKG FY2021). Các ca FY2016–FY2018 không đổi vì chuỗi bắt đầu 2019-01; `input_price_low` của HSG FY2021 vẫn `NOT_EVALUABLE` (lịch sử HRC 33 < 36 tháng).
+- Ảnh hưởng tới Phase 10 (lần chạy thử, chỉ định lượng): 7 → 9 SUPPORTED, 18 → 15 PARTIAL, 29 → 30 CONTRADICTED. `margin_selling_price` lên SUPPORTED (hạng 1) ở HPG FY2022 và NKG FY2021, nhưng xuống CONTRADICTED ở HSG FY2022 (HRC tăng 9,7% trong năm tài chính 10/2021–9/2022 trong khi biên gộp giảm).
+- Chưa làm: giá 2015–2018 và 2023, link nguồn từng tháng, chuỗi phế liệu.
 
 ## 3b. Cập nhật 2026-10-24 (sau khi nhóm thêm dữ liệu giá và thư viện mới)
 

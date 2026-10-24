@@ -835,7 +835,7 @@ Trạng thái ban đầu:
 - Phase 7: IN PROGRESS (2026-10-24; code xong, qua review; chờ nhóm xác nhận as-of và đo chất lượng trên dev, xem docs/phase_reports/PHASE_7.md)
 - Phase 8: IN PROGRESS (2026-10-24; code xong, qua review; chờ nhóm cung cấp dữ liệu giá và chốt ngưỡng/độ trễ, xem docs/phase_reports/PHASE_8.md)
 - Phase 9: IN PROGRESS (2026-10-24; code xong, qua review, chưa gọi API thật; xem docs/phase_reports/PHASE_9.md)
-- Phase 10: NOT STARTED
+- Phase 10: IN PROGRESS (2026-10-24; code xong, qua review; chờ nhóm xác nhận 3 lựa chọn luật và có giả thuyết reviewed, xem docs/phase_reports/PHASE_10.md)
 - Phase 11: NOT STARTED
 - Phase 12a: NOT STARTED
 - Phase 12: NOT STARTED

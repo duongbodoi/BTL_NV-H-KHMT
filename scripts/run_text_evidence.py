@@ -26,6 +26,7 @@ from steel_xai.verification import hypothesis_applies
 
 
 def main(argv: list[str]) -> int:
+    sys.stdout.reconfigure(encoding="utf-8")  # Windows: tránh UnicodeEncodeError
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dry-run", action="store_true", help="chỉ đếm, không gọi API")
     ap.add_argument("--run-id", default="run1", help="nằm trong khóa cache (spec: 3 lần chạy)")

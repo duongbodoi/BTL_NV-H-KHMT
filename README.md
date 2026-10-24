@@ -1,6 +1,6 @@
 # steel_xai — Giải thích bất thường BCTC ngành thép
 
-Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái: Phase 0, 1, 2 đã commit; Phase 3 (chuẩn hóa), Phase 4 (validation) và Phase 5 (anomaly engine, COMPLETED) chờ nhóm spot-check/commit; Phase 6 (khung thư viện giả thuyết) xong phần công cụ, chờ nhóm soạn nội dung (`hypotheses/`); Phase 7 (RAG BM25, lọc as-of) và Phase 8 (kiểm chứng định lượng) và Phase 9 (LLM: phân loại bằng chứng, kiểm trích dẫn) xong code, chờ nhóm xác nhận/dữ liệu giá/chạy thử API thật.
+Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái: Phase 0, 1, 2 đã commit; Phase 3 (chuẩn hóa), Phase 4 (validation) và Phase 5 (anomaly engine, COMPLETED) chờ nhóm spot-check/commit; Phase 6 (khung thư viện giả thuyết) xong phần công cụ, chờ nhóm soạn nội dung (`hypotheses/`); Phase 7 (RAG BM25, lọc as-of) và Phase 8 (kiểm chứng định lượng) và Phase 9 (LLM: phân loại bằng chứng, kiểm trích dẫn) và Phase 10 (trạng thái + xếp hạng giả thuyết) xong code, chờ nhóm xác nhận/dữ liệu giá/chạy thử API thật.
 
 ## Parse văn bản OCR (Phase 1)
 

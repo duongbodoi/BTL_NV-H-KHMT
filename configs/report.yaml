@@ -1,0 +1,144 @@
+# Bước 4 — Báo cáo grounded (spec mục 13, Phase 11). Các giá trị là ĐỀ XUẤT khởi điểm của Claude
+# (2026-10-24); nhóm chốt trước khi đóng băng tập test (thay đổi làm hash freeze lệch).
+
+top_k: 3                  # số hạng đưa vào báo cáo (hòa hạng ở hạng k thì lấy cả nhóm hòa)
+max_attempts: 3           # 1 bản nháp + tối đa 2 lần sinh lại khi bộ kiểm phát hiện lệch
+# Hết số lần mà vẫn lệch: skeleton_only = chỉ giữ phần do code dựng (an toàn, mặc định);
+# drop_failing = giữ các khẳng định qua mọi kiểm, bỏ khẳng định lỗi.
+on_exhausted: skeleton_only
+max_claims: 40
+max_claim_chars: 600
+
+numbers:
+  # Ngoài sai số làm tròn của chính chữ số cuối mà LLM viết (nửa đơn vị), cho thêm dung sai tương đối.
+  relative_tolerance: 0.0001
+  # Các mẫu (regex, không phân biệt hoa/thường) bị bỏ qua khi trích số: mã nguồn, mã giả thuyết, kỳ,
+  # ngày tháng. Năm (4 chữ số) chỉ được bỏ qua nếu năm đó có trong dữ liệu đầu vào của báo cáo.
+  exempt_patterns:
+    - '\b[NEHM]\d+\b'
+    - '\b[A-Z]{2,5}-\d+\b'
+    - '\bFY\s?\d{4}\b'
+    - '\b\d{4}-\d{2}(?:-\d{2})?\b'
+    - '\b\d{1,2}/\d{1,2}/\d{4}\b'
+    - '\btháng\s+\d{1,2}\b'
+    - '\bquý\s+[1-4]\b'
+    - '\btop[- ]?\d+\b'
+
+# Đơn vị hiển thị của chỉ báo bất thường (anomaly.indicators) và của giá trị check theo `tool`.
+# ratio: 0,25 hiển thị 25,0%; ratio_diff: hiệu hai tỷ lệ, 0,055 hiển thị 5,5 điểm %; pp: điểm phần trăm; days: ngày; z: điểm z; vnd: đồng; number: số thường.
+indicator_units:
+  inv_growth_yoy: ratio
+  rev_growth_yoy: ratio
+  dio: days
+  dio_prev: days
+  inv_to_revenue: ratio
+  inv_to_revenue_change: ratio_diff
+  raw_share: ratio
+  fg_share: ratio
+  wip_share: ratio
+  inv_minus_rev_growth: ratio_diff
+  dio_change_days: days
+  inv_growth_vs_peer: ratio_diff
+  inv_growth_z: z
+  inv_growth_mad_z: z
+  gross_margin: ratio
+  gross_margin_prev: ratio
+  gm_change_pp: pp
+  gm_vs_peer_pp: pp
+  gm_change_vs_peer_pp: pp
+  gm_change_z: z
+  gm_change_mad_z: z
+tool_units:
+  growth_yoy: ratio
+  growth_gap: ratio_diff
+  days_inventory_change: days
+  ratio: ratio
+  ratio_change: ratio_diff
+  ratio_of_changes: ratio
+  share_of_change: ratio
+  share_shift: ratio_diff
+  growth_vs_peer: ratio_diff
+  growth_vs_history: z
+  lagged_external_series: ratio
+  percentile_vs_history: ratio
+  growth_vs_series: ratio_diff
+  metric_level: vnd
+# Metric của fact đầu vào có đơn vị tỷ lệ (còn lại là VND).
+ratio_metrics: [gross_margin]
+
+indicator_labels:
+  inv_growth_yoy: tăng trưởng hàng tồn kho so với năm trước
+  rev_growth_yoy: tăng trưởng doanh thu so với năm trước
+  dio: số ngày tồn kho
+  dio_prev: số ngày tồn kho năm trước
+  inv_to_revenue: tồn kho trên doanh thu
+  inv_to_revenue_change: thay đổi tỷ lệ tồn kho trên doanh thu
+  raw_share: tỷ trọng nguyên vật liệu trong tồn kho gộp
+  fg_share: tỷ trọng thành phẩm trong tồn kho gộp
+  wip_share: tỷ trọng sản phẩm dở dang trong tồn kho gộp
+  inv_minus_rev_growth: chênh lệch tăng trưởng tồn kho và doanh thu
+  dio_change_days: thay đổi số ngày tồn kho
+  inv_growth_vs_peer: chênh lệch tăng trưởng tồn kho so với trung vị ngành
+  inv_growth_z: điểm z của tăng trưởng tồn kho so với lịch sử
+  inv_growth_mad_z: điểm z (MAD) của tăng trưởng tồn kho so với lịch sử
+  gross_margin: biên lợi nhuận gộp
+  gross_margin_prev: biên lợi nhuận gộp năm trước
+  gm_change_pp: thay đổi biên lợi nhuận gộp
+  gm_vs_peer_pp: chênh lệch biên lợi nhuận gộp so với trung vị ngành
+  gm_change_vs_peer_pp: chênh lệch thay đổi biên gộp so với trung vị ngành
+  gm_change_z: điểm z của thay đổi biên gộp so với lịch sử
+  gm_change_mad_z: điểm z (MAD) của thay đổi biên gộp so với lịch sử
+
+# Bộ lọc nội dung cấm (spec mục 3.4, 13). Regex trên văn bản đã chuẩn hóa NFC, chữ thường.
+forbidden:
+  investment_advice:
+    - 'khuyến nghị\s+(mua|bán|nắm giữ|đầu tư)'
+    - '\bnên\s+(mua|bán|nắm giữ|đầu tư)\b'
+    - '\b(mua|bán)\s+cổ phiếu\b'
+    - 'giá mục tiêu'
+    - 'cơ hội đầu tư'
+    - 'định giá\s+(hấp dẫn|rẻ|đắt)'
+    - '\b(buy|sell|hold)\b'
+  fraud:
+    - 'gian lận'
+    - 'lừa đảo'
+    - 'thao túng'
+    - 'làm giả'
+    - 'xào nấu'
+    - 'phù phép'
+    - 'che giấu\s+(lỗ|số liệu|khoản)'
+    - '\bfraud'
+  certainty:
+    - 'chắc chắn'
+    - 'không\s+(còn\s+)?(nghi ngờ|phải bàn)'
+    - 'đã\s+chứng minh'
+    - 'chứng minh\s+(rằng|được)'
+    - 'rõ ràng là'
+    - 'nguyên nhân duy nhất'
+    - 'khẳng định\s+(rằng|chắc)'
+# Khẳng định nhân quả: chỉ được phép khi khẳng định gắn với giả thuyết SUPPORTED, hoặc khi câu có
+# từ rào đón (hedges). Kết luận (mục 7 của báo cáo) phải có ít nhất một từ rào đón.
+causal:
+  - 'là nguyên nhân'
+  - 'nguyên nhân\s+(chính|là)'
+  - 'gây ra'
+  - 'dẫn đến'
+  - '\bdo đó\b'
+  - 'bởi vì'
+  - 'xuất phát từ'
+hedges:
+  - 'có thể'
+  - 'nhiều khả năng'
+  - 'phù hợp với'
+  - 'nếu'
+  - 'chưa đủ'
+  - 'chưa xác thực'
+  - 'chưa kiểm'
+  - 'với điều kiện'
+  - 'cần thêm'
+  - 'chưa thể'
+  - 'gợi ý'
+  - 'cho thấy khả năng'
+
+disclaimer: "Hỗ trợ phân tích, không phải tư vấn đầu tư. Không kết luận gian lận."
+draft_warning: "Kết quả chạy thử trên giả thuyết chưa được nhóm duyệt (draft): không dùng để đánh giá."

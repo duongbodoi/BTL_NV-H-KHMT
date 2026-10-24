@@ -45,6 +45,7 @@ COLUMNS = (
 
 
 def main(argv: list[str]) -> int:
+    sys.stdout.reconfigure(encoding="utf-8")  # Windows: tránh UnicodeEncodeError
     dataset = load_config("dataset")
     ocr = Path(argv[0] if argv else dataset["sources"]["ocr_dir"])
     out_dir = Path(argv[1] if len(argv) > 1 else dataset["paths"]["processed"])

@@ -1,5 +1,6 @@
 """Phase 8 — Kiểm chứng định lượng: registry tool, điều kiện đạt dạng dữ liệu, NOT_EVALUABLE."""
 
+from steel_xai.verification.analyze import AnomalyAnalysis, analyze_anomaly
 from steel_xai.verification.context import CheckContext, NotEvaluable, context_from_anomaly
 from steel_xai.verification.data import ExternalStore, FactStore, read_series_csv
 from steel_xai.verification.evaluate import (
@@ -12,9 +13,25 @@ from steel_xai.verification.evaluate import (
 )
 from steel_xai.verification.settings import VerificationSettings, load_verification_settings
 from steel_xai.verification.tools import TOOLS, tool_names
+from steel_xai.verification.verdict import (
+    VerdictRules,
+    build_findings,
+    decide,
+    load_verdict_rules,
+    rank_verdicts,
+    verify_hypothesis,
+)
 
 __all__ = [
     "TOOLS",
+    "AnomalyAnalysis",
+    "VerdictRules",
+    "analyze_anomaly",
+    "build_findings",
+    "decide",
+    "load_verdict_rules",
+    "rank_verdicts",
+    "verify_hypothesis",
     "CheckContext",
     "ExternalStore",
     "FactStore",
