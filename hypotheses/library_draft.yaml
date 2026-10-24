@@ -47,6 +47,7 @@ hypotheses:
         pass_when:
           op: <=
           value: 0.33
+          any: true
       - id: input_price_high
         kind: quant
         importance: supporting
@@ -60,6 +61,7 @@ hypotheses:
         pass_when:
           op: '>='
           value: 0.67
+          any: true
       - id: finished_goods_main_driver
         kind: quant
         importance: supporting
@@ -489,6 +491,7 @@ hypotheses:
           op: '>'
           value: 0
           signed_by_anomaly_direction: true
+          any: true
       - id: revenue_vs_cogs_growth
         kind: quant
         importance: supporting
@@ -515,6 +518,7 @@ hypotheses:
           op: <
           value: 0
           signed_by_anomaly_direction: true
+          any: true
       - id: selling_price_text
         kind: text
         importance: supporting
@@ -641,7 +645,8 @@ hypotheses:
         pass_when:
           op: '>='
           value: 0.05
-          abs: true
+          any: true
+          signed_by_anomaly_direction: true
       - id: opening_inventory_small
         kind: quant
         importance: supporting
@@ -716,6 +721,7 @@ hypotheses:
         params:
           numerator: inventory_provision_charge
           denominator: gross_profit
+          numerator_mode: level
         pass_when:
           op: '>='
           value: 0.3
@@ -872,7 +878,7 @@ hypotheses:
         params:
           numerator: cip_transfer_to_fixed_assets
           denominator: construction_in_progress
-          period: prior_year_end
+          denominator_period: prior_year_end
         pass_when:
           op: '>='
           value: 0.3
@@ -901,7 +907,7 @@ hypotheses:
         params:
           numerator: cip_transfer_to_fixed_assets
           denominator: construction_in_progress
-          period: prior_year_end
+          denominator_period: prior_year_end
         pass_when:
           op: <
           value: 0.1

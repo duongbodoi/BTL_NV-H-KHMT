@@ -1,0 +1,42 @@
+# Kiểm chứng định lượng (spec mục 10.2, Phase 8): mọi tham số tính toán nằm ở đây.
+# Không có dữ liệu giá ngoài trong repo: nhóm thu thập (spec mục 7.1: quặng sắt từ World Bank Pink
+# Sheet; giá thép từ nguồn công khai chốt khi thu thập) rồi đặt file CSV theo định dạng ở
+# docs/EXTERNAL_DATA.md. Chuỗi thiếu file → check dùng chuỗi đó ra NOT_EVALUABLE, không bị bỏ qua.
+
+external:
+  # Giá của tháng M chỉ coi là đã công bố sau `publication_lag_days` kể từ cuối tháng M (giữ bảo thủ
+  # để không rò rỉ as-of, spec mục 7.2). 35 ngày là ĐỀ XUẤT của Claude; nhóm chốt theo nguồn thật.
+  publication_lag_days: 35
+  window_months: 12         # cửa sổ trung bình giá để so YoY
+  min_months: 9             # số tháng tối thiểu có dữ liệu trong mỗi cửa sổ, ít hơn → NOT_EVALUABLE
+  percentile_min_months: 36 # lịch sử tối thiểu để tính phân vị so với nhiều năm
+  percentile_lookback_years: 10
+  # `lag_months`: độ trễ từ giá đầu vào tới giá vốn (spec mục 10, "có độ trễ"). Các số dưới là ĐỀ XUẤT
+  # khởi điểm của Claude, KHÔNG phải quyết định của nhóm; chốt theo vòng quay tồn kho / hợp đồng mua.
+  series:
+    iron_ore_price: {file: data/external/iron_ore_price.csv, lag_months: 3}
+    coking_coal_price: {file: data/external/coking_coal_price.csv, lag_months: 3}
+    hrc_price: {file: data/external/hrc_price.csv, lag_months: 1}
+    steel_price: {file: data/external/steel_price.csv, lag_months: 1}
+    usd_vnd: {file: data/external/usd_vnd.csv, lag_months: 0}
+
+history:
+  min_changes: 4   # số lần thay đổi YoY của các năm TRƯỚC tối thiểu để tính z-score
+
+peers:
+  min_peers: 2     # ít hơn → NOT_EVALUABLE
+
+# Metric tài khoản đối ứng lưu số ÂM trên báo cáo (ví dụ dự phòng giảm giá hàng tồn kho). Với các metric
+# này, "tăng trưởng" tính trên độ lớn |giá trị| (dự phòng tăng 2 lần = độ lớn tăng 100%).
+contra_metrics: [inventory_provision]
+
+# Metric mà Phase 3 CHƯA trích nhưng thư viện giả thuyết đã nhắc (dấu * trong library_draft.yaml).
+# Check dùng chúng ra NOT_EVALUABLE tới khi trích thêm; tên nằm ở đây để bắt lỗi gõ sai tên metric.
+planned_metrics: [goods_in_transit, accounts_payable, inventory_provision_charge, segment_revenue, export_revenue_share, production_volume, depreciation, cip_transfer_to_fixed_assets]
+
+# Hướng bất thường mà thư viện giả thuyết hiện có áp dụng. Thư viện chỉ nêu nguyên nhân của
+# "tồn kho TĂNG"; chưa có giả thuyết cho tồn kho giảm, nên không chạy giả thuyết tồn kho trên ca
+# giảm (chạy sẽ biến bằng chứng ngược hướng thành bằng chứng ủng hộ). Nhóm đổi khi soạn thêm.
+applicable_directions:
+  inventory_increase: [up]
+  gross_margin_change: [up, down]

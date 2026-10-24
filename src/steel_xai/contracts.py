@@ -319,3 +319,84 @@ def _testable(v: Any) -> str | None:
     if v is False:
         return "no"
     return v
+
+
+class CheckStatus(StrEnum):
+    """Kết quả một check định lượng (spec mục 10.2). Thiếu dữ liệu KHÔNG phải FAIL."""
+
+    PASS = "PASS"
+    FAIL = "FAIL"
+    NOT_EVALUABLE = "NOT_EVALUABLE"
+
+
+@dataclass(frozen=True)
+class CheckInput:
+    """Một đầu vào của phép tính, kèm nguồn: fact (có provenance) hoặc chuỗi giá bên ngoài."""
+
+    kind: str  # fact | external
+    name: str  # metric hoặc tên chuỗi giá
+    period: str  # FY2022, hoặc khoảng tháng của chuỗi ngoài
+    value: Decimal
+    source: Provenance | str | None = None  # Provenance của fact; hoặc mô tả nguồn chuỗi ngoài
+    flags: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        src = self.source.to_dict() if isinstance(self.source, Provenance) else self.source
+        return {
+            "kind": self.kind,
+            "name": self.name,
+            "period": self.period,
+            "value": str(self.value),
+            "source": src,
+            "flags": list(self.flags),
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> CheckInput:
+        src = d.get("source")
+        return cls(
+            kind=d["kind"],
+            name=d["name"],
+            period=d["period"],
+            value=Decimal(d["value"]),
+            source=Provenance.from_dict(src) if isinstance(src, dict) else src,
+            flags=tuple(d.get("flags", ())),
+        )
+
+
+@dataclass(frozen=True)
+class CheckResult:
+    """Kết quả chạy một `Check` định lượng: trạng thái, giá trị tính được, đầu vào có nguồn.
+
+    `values`: giá trị mỗi thành phần (một giá trị `value`, hoặc mỗi chuỗi giá một giá trị);
+    `None` = không tính được. `reason` giải thích NOT_EVALUABLE.
+    """
+
+    check_id: str
+    status: CheckStatus
+    values: dict[str, Decimal | None]
+    inputs: tuple[CheckInput, ...] = ()
+    reason: str = ""
+
+    def __post_init__(self) -> None:
+        if self.status is CheckStatus.NOT_EVALUABLE and not self.reason:
+            raise ValueError("NOT_EVALUABLE phải có reason")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "check_id": self.check_id,
+            "status": self.status.value,
+            "values": {k: None if v is None else str(v) for k, v in self.values.items()},
+            "inputs": [i.to_dict() for i in self.inputs],
+            "reason": self.reason,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> CheckResult:
+        return cls(
+            check_id=d["check_id"],
+            status=CheckStatus(d["status"]),
+            values={k: None if v is None else Decimal(v) for k, v in d["values"].items()},
+            inputs=tuple(CheckInput.from_dict(i) for i in d.get("inputs", ())),
+            reason=d.get("reason", ""),
+        )

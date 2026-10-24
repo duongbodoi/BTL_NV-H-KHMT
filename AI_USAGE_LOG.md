@@ -309,3 +309,56 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 **Cập nhật (cùng ngày):** nhóm yêu cầu Claude sinh giả thuyết nháp, Claude đã sinh 15 bản (`status: draft`); sau đó nhóm đưa `library_draft.yaml` của chính họ và yêu cầu bỏ bản của Claude. Đã xóa toàn bộ bản Claude sinh, dùng file của nhóm; loader mở rộng để nạp định dạng `hypotheses: [...]` và các trường phụ. Claude không sửa nội dung giả thuyết của nhóm. Người cần: thêm `checks`, điền `critical_missing_evidence` còn trống (INV-7, GM-7), tạo `HYPOTHESIS_LIBRARY_DRAFT.md` (danh mục nguồn S0–S16), rồi duyệt.
 
 **Cập nhật cuối:** theo yêu cầu của nhóm, Claude đề xuất `checks` cho cả 15 giả thuyết trong `hypotheses/library_draft.yaml` (chèn khối `checks:`, giữ nguyên các trường nhóm viết; có bản sao lưu và so sánh tự động). Ngưỡng `pass_when`, tên `tool`, danh sách chuỗi giá và mức `critical` là phỏng đoán của Claude, nhóm cần rà trước khi duyệt.
+
+## 2026-10-24 — Phase 7 (RAG evidence retrieval)
+
+**Công cụ:** Claude Code (Claude Sonnet 5.5).
+
+**Bối cảnh:** nhóm yêu cầu làm Phase 7 khi Phase 6 chưa COMPLETED (chưa có giả thuyết `reviewed`) và Phase 3–5 còn điểm tạm. Claude đã nêu điều này trong báo cáo.
+
+**Việc Claude đã làm:**
+- Audit-first: `retrieval/` rỗng; `retrieval.yaml` chỉ có khung (`top_k: null`); kho dữ liệu là OCR BCTC (thuyết minh), không có báo cáo thường niên.
+- `retrieval/{settings,chunking,retriever,build}.py`, `configs/retrieval.yaml`, `scripts/build_rag_index.py`, `tests/test_retrieval.py`; dựng kho thật 6.698 chunk.
+
+**Lỗi/sai sót bắt được:**
+- Review độc lập (subagent): 0 CRITICAL, 0 HIGH, 2 MEDIUM, 3 LOW. Reviewer tấn công lọc as-of (132 mốc × truy vấn top-50, so điểm với kho chỉ chứa chunk đủ điều kiện): không có rò rỉ.
+  - MEDIUM: mảnh chunk gộp từ nhiều block mang sai trang/`block_ids` (74 chunk); bật thêm báo cáo `separate` làm cả hai loại mất ngày công bố vì hai ngày ký khác nhau.
+  - LOW: `company` bị bỏ qua khi truyền `companies`; crash khi `doc_published` sai kiểu; cache khóa theo ngày; as-of tùy chỉnh sai định dạng không bị từ chối.
+  - Đã sửa toàn bộ, kèm 5 test hồi quy; xác minh lại trên kho thật.
+- Trong lúc làm: bộ quét bí mật của repo (`test_no_secrets_in_repo`) báo nhầm tên hằng `_TOKEN` (regex tìm "token ="); đổi tên thành `_WORD`.
+
+**Phần người cần tự xác minh:**
+- Thay mốc as-of tạm (ngày ký kiểm toán) bằng ngày công bố thật trước khi chạy A/B/C.
+- Xác nhận cách hiểu "năm 2024 trở đi" theo năm tài chính (tài liệu FY2023 ký 3/2024 vẫn trong kho).
+- Chốt `top_k`, tham số BM25 và so BM25/dense/hybrid trên tập dev; hiện là giá trị khởi điểm của Claude và **chất lượng truy xuất chưa được đo**.
+- Đọc thử kết quả truy xuất cho vài truy vấn của giả thuyết trong `hypotheses/library_draft.yaml`.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-
+
+## 2026-10-24 — Phase 8 (Quantitative verification tools)
+
+**Công cụ:** Claude Code (Claude Sonnet 5.5).
+
+**Bối cảnh:** nhóm yêu cầu làm Phase 8 khi Phase 6 chưa COMPLETED (chưa có giả thuyết `reviewed`), chưa có dữ liệu giá bên ngoài, Phase 3–5 còn điểm tạm. Claude đã nêu điều này trong báo cáo.
+
+**Việc Claude đã làm:**
+- Audit-first: `verification/` rỗng; không có dữ liệu giá trong repo; thư viện nháp đã nêu 11 tool tên tạm trong `checks`.
+- `contracts.CheckResult/CheckInput/CheckStatus`; `verification/{settings,data,context,tools,evaluate}.py` (registry 13 tool); `configs/verification.yaml`; `scripts/run_quant_checks.py`; `docs/EXTERNAL_DATA.md`; `tests/test_verification*.py`.
+- Đối chiếu độc lập với Phase 5: hai chỉ báo (`inv_minus_rev_growth`, `dio_change_days`) tính ở hai nơi cho cùng số trên 7/7 ca thật.
+
+**Lỗi/sai sót bắt được:**
+- Review độc lập (subagent): 0 CRITICAL, 2 HIGH, 7 MEDIUM, 9 LOW, mỗi lỗi có input tái hiện; không có rò rỉ as-of.
+  - HIGH: dự phòng hàng tồn kho lưu số âm nên hai check không bao giờ chạy được; giả thuyết "tồn kho tăng" chạy trên ca tồn kho giảm có thể ra PASS ủng hộ vì cờ có dấu đảo hướng.
+  - MEDIUM: `ratio` dùng cùng kỳ cho tử và mẫu; check "tất cả chuỗi giá" PASS khi mới có một nửa dữ liệu; GM-3 dùng `abs` lẫn với GM-2; `ratio_of_changes` không đo đúng ý GM-4; `validate_check` văng lỗi thô; typo tên metric lẫn với thiếu dữ liệu; số ngày DIO không có trong inputs.
+  - Đã sửa toàn bộ HIGH/MEDIUM và hầu hết LOW, kèm ~60 test hồi quy; còn 1 LOW ghi nhận (phân vị luôn > 0).
+- Một số check do chính Claude đề xuất ở Phase 6 có ngữ nghĩa sai (GM-3, GM-4, GM-7); đã chỉnh trong khối `checks` của `library_draft.yaml`, không đụng nội dung nhóm viết.
+
+**Phần người cần tự xác minh:**
+- Thu thập chuỗi giá (`docs/EXTERNAL_DATA.md`), chốt `lag_months`, `publication_lag_days`.
+- Rà các `checks` và ngưỡng `pass_when` trong `hypotheses/library_draft.yaml` (đều là phỏng đoán của Claude).
+- Quyết định có soạn giả thuyết cho tồn kho GIẢM hay không (hiện không chạy giả thuyết tồn kho trên ca giảm).
+- Quyết định có trích thêm các metric dấu `*` ở Phase 3 hay chấp nhận NOT_EVALUABLE.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

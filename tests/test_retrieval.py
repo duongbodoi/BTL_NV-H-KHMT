@@ -369,3 +369,77 @@ def test_build_chunks_on_a_tiny_corpus_excludes_reference_years_and_flags_missin
     r = BM25Retriever(res.chunks, S)
     got = r.retrieve("bình quân gia quyền", company="AAA", asof="2030-01-01", top_k=20)
     assert got and all("2021" in e.doc_id for e in got)  # tài liệu thiếu ngày không bao giờ lộ ra
+
+
+# ---------------- vòng review độc lập
+
+
+def test_split_pieces_keep_the_page_and_block_of_their_own_block():
+    long = " ".join(f"Câu số {i} nói về hàng tồn kho." for i in range(40))
+    text = f"===== PAGE 1 =====\nĐoạn đầu ngắn.\n\n===== PAGE 2 =====\n{long}\n"
+    doc = parse_text(text, "AAA_2020")
+    cs = chunk_document(
+        doc,
+        company="AAA",
+        period="FY2020",
+        period_year=2020,
+        published="2021-03-01",
+        published_source="audit_report_date",
+        settings=settings(max_chars=400),
+    )
+    page2 = [c for c in cs if "Câu số" in c.text]
+    assert len(page2) > 1
+    for c in page2:
+        assert c.page == c.page_end == 2 and len(c.block_ids) == 1
+        assert (
+            doc.get_block(c.block_ids[0]).page == 2 and c.text in doc.get_block(c.block_ids[0]).text
+        )
+    assert all(len(c.text) <= 400 for c in cs)
+
+
+def test_company_must_be_inside_companies_and_bad_published_types_are_skipped():
+    r = R([C("a", "hàng tồn kho", company="NKG")])
+    with pytest.raises(ValueError, match="phải nằm trong companies"):
+        r.retrieve("hàng tồn kho", company="HPG", asof="2030-01-01", companies=["NKG"])
+    weird = C("w", "hàng tồn kho")
+    object.__setattr__(weird, "doc_published", 20230101)  # JSONL bị sửa tay
+    assert ids(
+        R([weird, C("ok", "hàng tồn kho")]).retrieve(
+            "hàng tồn kho", company="AAA", asof="2030-01-01"
+        )
+    ) == ["ok"]
+
+
+def test_stats_cache_is_keyed_by_the_eligible_set_not_by_each_date():
+    r = R([C("a", "hàng tồn kho", published="2020-01-01")])
+    for d in range(1, 29):
+        r.retrieve("hàng tồn kho", company="AAA", asof=f"2021-02-{d:02d}")
+    assert len(r._stats_cache) == 1
+
+
+def test_build_rejects_invalid_custom_asof_dates(tmp_path):
+    from steel_xai.anomaly import AsofEntry
+
+    with pytest.raises(ValueError, match="as-of không hợp lệ"):
+        build_chunks(tmp_path, ["AAA"], S, {("AAA", "FY2021"): AsofEntry("2023-13-45", "manual")})
+
+
+def test_both_document_kinds_get_their_own_publication_date(tmp_path):
+    def doc(kind, audit_line):
+        d = tmp_path / "AAA" / "2021" / f"AAA_financial_statements_2021_{kind}"
+        d.mkdir(parents=True)
+        (d / f"AAA_financial_statements_2021_{kind}_extracted.txt").write_text(
+            "===== PAGE 1 =====\n"
+            "Báo cáo tài chính cho năm kết thúc ngày 31 tháng 12 năm 2021\n\n"
+            f"{audit_line}\n\n3.6 Hàng tồn kho\n\nHàng tồn kho tính theo bình quân gia quyền.\n",
+            encoding="utf-8",
+        )
+
+    doc("consolidated", "Hà Nội, ngày 15 tháng 3 năm 2022")
+    doc("separate", "Hà Nội, ngày 20 tháng 3 năm 2022")
+    res = build_chunks(tmp_path, ["AAA"], settings(document_kinds=("consolidated", "separate")))
+    by_doc = {c.doc_id: c.doc_published for c in res.chunks}
+    assert by_doc == {
+        "AAA_financial_statements_2021_consolidated": "2022-03-15",
+        "AAA_financial_statements_2021_separate": "2022-03-20",
+    }

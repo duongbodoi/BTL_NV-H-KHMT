@@ -103,7 +103,7 @@ class BM25Retriever:
             toks = tokenize(f"{c.section or ''}\n{c.text}", self.settings.ngrams)
             self._tf.append(Counter(toks))
             self._len.append(len(toks))
-        self._stats_cache: dict[tuple[tuple[str, ...], dt.date], tuple[list[int], _Stats]] = {}
+        self._stats_cache: dict[tuple[int, ...], _Stats] = {}
 
     # ---- đủ điều kiện (as-of)
 
@@ -119,6 +119,8 @@ class BM25Retriever:
                 continue
             if c.doc_published is None:
                 continue
+            if not isinstance(c.doc_published, str):
+                continue
             try:
                 published = dt.date.fromisoformat(c.doc_published)
             except ValueError:
@@ -127,16 +129,16 @@ class BM25Retriever:
                 out.append(i)
         return out
 
-    def _stats(self, companies: tuple[str, ...], asof: dt.date) -> tuple[list[int], _Stats]:
-        key = (companies, asof)
+    def _stats(self, idx: list[int]) -> _Stats:
+        """Thống kê chỉ trên tập đủ điều kiện; khóa cache là chính tập đó."""
+        key = tuple(idx)
         hit = self._stats_cache.get(key)
         if hit is None:
-            idx = self.eligible_indices(companies, asof)
             df: Counter[str] = Counter()
             for i in idx:
                 df.update(self._tf[i].keys())
             total = sum(self._len[i] for i in idx)
-            hit = (idx, _Stats(len(idx), total / len(idx) if idx else 0.0, dict(df)))
+            hit = _Stats(len(idx), total / len(idx) if idx else 0.0, dict(df))
             self._stats_cache[key] = hit
         return hit
 
@@ -172,7 +174,10 @@ class BM25Retriever:
             raise ValueError("top_k phải là số nguyên >= 1")
         cut = parse_asof(asof)
         scope = tuple(sorted(set(companies) if companies is not None else {company}))
-        idx, st = self._stats(scope, cut)
+        if company not in scope:
+            raise ValueError(f"company {company!r} phải nằm trong companies {list(scope)}")
+        idx = self.eligible_indices(scope, cut)
+        st = self._stats(idx)
         merged: dict[int, tuple[float, list[str]]] = {}
         for q in queries:
             for i, score in self._top(q, idx, st, k):

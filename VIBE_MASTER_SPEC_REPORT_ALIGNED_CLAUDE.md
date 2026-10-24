@@ -832,8 +832,8 @@ Trạng thái ban đầu:
 - Phase 4: NOT STARTED
 - Phase 5: COMPLETED (2026-10-24; ngưỡng và as-of còn tạm, xem docs/phase_reports/PHASE_5.md)
 - Phase 6: IN PROGRESS (2026-10-24; công cụ xong, chờ nhóm soạn thư viện 6–8 giả thuyết/loại, xem docs/phase_reports/PHASE_6.md)
-- Phase 7: NOT STARTED
-- Phase 8: NOT STARTED
+- Phase 7: IN PROGRESS (2026-10-24; code xong, qua review; chờ nhóm xác nhận as-of và đo chất lượng trên dev, xem docs/phase_reports/PHASE_7.md)
+- Phase 8: IN PROGRESS (2026-10-24; code xong, qua review; chờ nhóm cung cấp dữ liệu giá và chốt ngưỡng/độ trễ, xem docs/phase_reports/PHASE_8.md)
 - Phase 9: NOT STARTED
 - Phase 10: NOT STARTED
 - Phase 11: NOT STARTED

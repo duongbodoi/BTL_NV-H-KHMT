@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from steel_xai.anomaly.corpus import DocRef, asof_from_corpus, find_documents, load_corpus
+from steel_xai.anomaly.corpus import (
+    STATUS_OK,
+    Corpus,
+    asof_from_corpus,
+    find_documents,
+    load_corpus,
+)
 from steel_xai.anomaly.settings import AsofEntry
 from steel_xai.config import load_config
 from steel_xai.parsing import parse_file
@@ -38,15 +45,37 @@ def build_chunks(
     ocr = Path(ocr_dir or dataset["sources"]["ocr_dir"])
     comps = list(companies if companies is not None else dataset["companies"])
 
-    refs: list[DocRef] = []
-    for kind in s.document_kinds:
-        refs += find_documents(ocr, comps, kind)
-    corpus = load_corpus(refs)
-    if asof is None:
-        asof, _ = asof_from_corpus(corpus, s.reference_only_from_year)
+    if asof is not None:
+        for key, entry in asof.items():
+            try:
+                dt.date.fromisoformat(entry.date)
+            except (TypeError, ValueError) as e:
+                raise ValueError(f"as-of không hợp lệ cho {key}: {entry.date!r}") from e
 
     chunks: list[Chunk] = []
     notes: list[str] = []
+    for kind in s.document_kinds:
+        # ngày công bố tính RIÊNG cho từng loại báo cáo: hợp nhất và riêng lẻ có thể ký khác ngày,
+        # trộn chung sẽ làm cả hai mất ngày (conflict) và biến mất khỏi kho
+        corpus = load_corpus(find_documents(ocr, comps, kind))
+        if asof is None:
+            kind_asof, rows = asof_from_corpus(corpus, s.reference_only_from_year)
+            notes += [
+                f"{r.doc_id}: as-of {r.status}: {r.note}" for r in rows if r.status != STATUS_OK
+            ]
+        else:
+            kind_asof = dict(asof)
+        _chunk_corpus(corpus, kind_asof, s, chunks, notes)
+    return BuildResult(tuple(chunks), tuple(notes))
+
+
+def _chunk_corpus(
+    corpus: Corpus,
+    asof: Mapping[tuple[str, str], AsofEntry],
+    s: RetrievalSettings,
+    chunks: list[Chunk],
+    notes: list[str],
+) -> None:
     for ref, ctx in corpus.docs:
         if ctx.report_end is None:
             notes.append(f"{ref.doc_id}: không đọc được năm tài chính, bỏ qua")
@@ -71,7 +100,6 @@ def build_chunks(
             published_source=None if entry is None else entry.source,
             settings=s,
         )
-    return BuildResult(tuple(chunks), tuple(notes))
 
 
 def write_chunks(chunks: tuple[Chunk, ...] | list[Chunk], path: str | Path) -> None:

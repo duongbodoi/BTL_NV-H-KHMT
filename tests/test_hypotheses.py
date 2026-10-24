@@ -38,7 +38,7 @@ REVIEWED = {
             "kind": "quant",
             "importance": "critical",
             "polarity": "support",
-            "tool": "growth",
+            "tool": "growth_yoy",
             "params": {"metric": "capex"},
             "pass_when": {"op": ">", "value": 0},
         },
@@ -189,7 +189,7 @@ def test_quant_check_structure(mutate, needle):
         (lambda c: c.pop("queries"), "cần `queries`"),
         (lambda c: c.update(queries=[]), "cần `queries`"),
         (lambda c: c.update(queries=[""]), "cần `queries`"),
-        (lambda c: c.update(tool="growth"), "không có tool"),
+        (lambda c: c.update(tool="growth_yoy"), "không có tool"),
     ],
 )
 def test_text_check_structure(mutate, needle):
@@ -213,7 +213,7 @@ def test_known_tools_restricts_quant_tools_when_configured():
 
     s = replace(S, known_tools=frozenset({"ratio"}))
     assert any("known_tools" in e for e in errors(REVIEWED, s))
-    assert errors(REVIEWED, replace(S, known_tools=frozenset({"growth"}))) == []
+    assert errors(REVIEWED, replace(S, known_tools=frozenset({"growth_yoy"}))) == []
 
 
 def test_only_reviewed_hypotheses_enter_the_pipeline(tmp_path):

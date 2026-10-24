@@ -26,6 +26,7 @@ CONFIG_NAMES = (
     "normalization",
     "validation",
     "hypotheses",
+    "verification",
 )
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 

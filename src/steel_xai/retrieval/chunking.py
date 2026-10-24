@@ -177,12 +177,12 @@ def chunk_document(
         if not buf:
             return
         text = "\n\n".join(b.text.strip() for b in buf if b.text.strip())
-        if text:
-            if len(buf) == 1 or len(text) > settings.max_chars:
-                for piece in split_text(text, settings.max_chars):
-                    emit(buf, piece, "text", section)
-            else:
-                emit(buf, text, "text", section)
+        if text and len(text) <= settings.max_chars:
+            emit(buf, text, "text", section)
+        elif text:  # mỗi block tự tách, để trang/block_ids của mảnh luôn đúng
+            for b in buf:
+                for piece in split_text(b.text.strip(), settings.max_chars):
+                    emit([b], piece, "text", section)
         buf = []
 
     for block in doc.iter_blocks():
@@ -191,7 +191,7 @@ def chunk_document(
             if heading:
                 flush()
                 section = block.text.strip()
-            size = sum(len(b.text) for b in buf) + len(block.text)
+            size = sum(len(b.text.strip()) + 2 for b in buf) + len(block.text.strip())
             if buf and size > settings.max_chars:
                 flush()
             buf.append(block)
