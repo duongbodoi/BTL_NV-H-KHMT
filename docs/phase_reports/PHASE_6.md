@@ -81,3 +81,7 @@ Claude từng sinh 15 bản nháp theo yêu cầu, sau đó nhóm đưa `library
 Claude đã **đề xuất `checks`** cho cả 15 giả thuyết (chèn vào file, không đổi nội dung nhóm viết; có kiểm tự động rằng các trường gốc không đổi). Ngưỡng `pass_when`, danh sách chuỗi giá và mức `critical` là phỏng đoán cần nhóm rà; tên `tool` chốt ở Phase 8; check dùng metric chưa trích sẽ `NOT_EVALUABLE`.
 
 Còn thiếu để có giả thuyết `reviewed` (nhóm làm): rà `checks`, `critical_missing_evidence` cho INV-7 và GM-7, file danh mục nguồn `HYPOTHESIS_LIBRARY_DRAFT.md` (chưa có trong repo), rồi `reviewed_by`.
+
+## 12. Cập nhật 2026-10-24 (thư viện mới của nhóm)
+
+Nhóm thay `library_draft.yaml` bằng bản mới (22 giả thuyết: 15 cũ + DEC-1..7 cho tồn kho giảm, trường `direction`). Claude đã gộp: giữ nguyên nội dung nhóm viết, giữ `checks` đã có của 15 giả thuyết cũ, soạn `checks` đề xuất cho DEC-1..7. Schema nhận thêm `direction` (`up|down|both`, bắt buộc khi `reviewed`). Xem `docs/phase_reports/PHASE_8.md` mục 3b.

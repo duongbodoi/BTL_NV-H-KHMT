@@ -260,6 +260,7 @@ class Hypothesis:
     testable_with_annual_data: str | None = None  # yes | partial | no
     source_strength: str | None = None
     extension_beyond_midterm: bool = False
+    direction: str | None = None  # up | down | both: hướng bất thường mà giả thuyết giải thích
 
     def __post_init__(self) -> None:
         if self.status not in HYPOTHESIS_STATUSES:
@@ -284,6 +285,7 @@ class Hypothesis:
             "testable_with_annual_data": self.testable_with_annual_data,
             "source_strength": self.source_strength,
             "extension_beyond_midterm": self.extension_beyond_midterm,
+            "direction": self.direction,
         }
 
     @classmethod
@@ -309,6 +311,7 @@ class Hypothesis:
             testable_with_annual_data=_testable(d.get("testable_with_annual_data")),
             source_strength=d.get("source_strength"),
             extension_beyond_midterm=bool(d.get("extension_beyond_midterm", False)),
+            direction=d.get("direction"),
         )
 
 

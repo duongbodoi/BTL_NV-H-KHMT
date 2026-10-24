@@ -31,6 +31,7 @@ REVIEWED = {
     "critical_missing_evidence": ["thiếu liên kết trực tiếp"],
     "sources": ["Báo cáo ngành X, 2023"],
     "status": "reviewed",
+    "direction": "up",
     "reviewed_by": "Nguyễn Văn A",
     "checks": [
         {
@@ -347,7 +348,7 @@ def test_repo_library_is_the_teams_draft_and_none_is_reviewed_yet():
     lib = load_library()
     assert lib.reviewed == ()
     by_type = {t: [h for h in lib.drafts if h.anomaly_type == t] for t in S.anomaly_types}
-    assert all(6 <= len(v) <= 8 for v in by_type.values())
+    assert all(len(v) >= 6 for v in by_type.values())
     assert all(h.status == "draft" and h.reviewed_by is None for h in lib.drafts)
     assert all(h.code for h in lib.drafts)
     inv4 = next(h for h in lib.drafts if h.code == "INV-4")
@@ -415,3 +416,24 @@ def test_every_team_draft_has_checks_and_would_pass_review_once_signed_off():
         for c in raw["checks"]:
             c["queries"] = c["queries"] or None
         assert errors(raw) == [], h.id
+
+
+# ---------------- trường direction
+
+
+def test_direction_is_validated_and_required_for_reviewed():
+    assert errors(make(direction="down")) == [] and errors(make(direction="both")) == []
+    assert any("direction phải thuộc" in e for e in errors(make(direction="sideways")))
+    assert any("thiếu direction" in e for e in errors(make(direction=None)))
+    # bản draft không bắt buộc, nhưng nếu khai thì phải đúng
+    assert errors(make(status="draft", reviewed_by=None, direction=None)) == []
+    assert any(
+        "direction" in e for e in errors(make(status="draft", reviewed_by=None, direction="x"))
+    )
+
+
+def test_team_library_declares_a_direction_and_covers_both_directions_of_inventory():
+    lib = load_library()
+    assert all(h.direction in ("up", "down", "both") for h in lib.drafts)
+    inv = [h for h in lib.drafts if h.anomaly_type == "inventory_increase"]
+    assert {h.direction for h in inv} >= {"up", "down"} and len(inv) >= 12

@@ -47,7 +47,9 @@ _OPTIONAL = (
     "testable_with_annual_data",
     "source_strength",
     "extension_beyond_midterm",
+    "direction",
 )
+DIRECTIONS = ("up", "down", "both")
 _TESTABLE = (True, False, "yes", "no", "partial")  # YAML 1.1: yes/no thành bool
 _CHECK_REQUIRED = ("id", "kind", "importance", "polarity")
 _CHECK_OPTIONAL = ("tool", "params", "pass_when", "queries")
@@ -301,6 +303,8 @@ def validate_hypothesis(raw: Any, settings: LibrarySettings) -> list[str]:
         raw["extension_beyond_midterm"], bool
     ):
         errs.append("extension_beyond_midterm phải là true/false")
+    if raw.get("direction") is not None and raw["direction"] not in DIRECTIONS:
+        errs.append(f"direction phải thuộc {DIRECTIONS}")
     if raw.get("source_strength") is not None and not _is_text(raw["source_strength"]):
         errs.append("source_strength phải là chuỗi không rỗng")
     rb = raw.get("reviewed_by")
@@ -323,6 +327,8 @@ def validate_hypothesis(raw: Any, settings: LibrarySettings) -> list[str]:
         return errs
 
     # ---- điều kiện riêng của `reviewed` (spec mục 9, Phase 6)
+    if raw.get("direction") is None:
+        errs.append("reviewed: thiếu direction (up | down | both)")
     for k in _TEXT_FIELDS:
         if not _is_text(raw.get(k)):
             errs.append(f"reviewed: {k} không được rỗng")

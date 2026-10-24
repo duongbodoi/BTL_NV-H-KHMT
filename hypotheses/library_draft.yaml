@@ -2,12 +2,14 @@
 # Chưa có giả thuyết nào được duyệt: status: draft, reviewed_by: null.
 # Trường `checks` (dạng có cấu trúc) sẽ được thêm ở Phase 6 theo spec mục 10.1.
 # Metric có hậu tố "*" là chỉ tiêu Phase 3 chưa trích, cần bổ sung.
+# direction: up | down | both. anomaly_type giữ tên khóa trong code (inventory_increase xét hai chiều).
 
 hypotheses:
 
   - id: inventory_raw_material_stockpiling
     code: INV-1
     anomaly_type: inventory_increase
+    direction: up
     claim: Tồn kho tăng do doanh nghiệp tích trữ nguyên vật liệu khi giá đầu vào ở vùng thấp.
     business_rationale: Doanh nghiệp thép mua trữ nguyên liệu giá rẻ để hưởng lợi khi giá tăng; đây là "con dao hai lưỡi" khi giá đảo chiều.
     expected_quantitative_evidence:
@@ -22,7 +24,7 @@ hypotheses:
       - không có giá đầu vào tại thời điểm cuối kỳ
     testable_with_annual_data: partial
     sources: [S0, S1, S8, S9]
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: raw_materials_main_driver
         kind: quant
         importance: critical
@@ -87,6 +89,7 @@ hypotheses:
   - id: inventory_capacity_expansion
     code: INV-2
     anomaly_type: inventory_increase
+    direction: up
     claim: Tồn kho tăng do chuẩn bị mở rộng sản xuất.
     business_rationale: Dự án công suất mới cần nguyên liệu dự trữ trước khi vận hành.
     expected_quantitative_evidence:
@@ -103,7 +106,7 @@ hypotheses:
     testable_with_annual_data: yes
     sources: [S0, S5, S7]
     source_strength: weak   # chưa có nguồn ngoài nối trực tiếp cơ chế
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: capex_up
         kind: quant
         importance: critical
@@ -178,6 +181,7 @@ hypotheses:
   - id: inventory_weak_demand
     code: INV-3
     anomaly_type: inventory_increase
+    direction: up
     claim: Tồn kho tăng do hàng bán chậm, nhu cầu yếu.
     business_rationale: Cầu giảm so với kế hoạch làm thành phẩm tồn đọng; tồn kho tăng nhanh hơn doanh thu là tín hiệu xấu về lợi nhuận tương lai.
     expected_quantitative_evidence:
@@ -194,7 +198,7 @@ hypotheses:
       - không tách được thành phần tồn kho (thuyết minh thiếu)
     testable_with_annual_data: yes
     sources: [S0, S3, S6, S15, S16]
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: inventory_outpaces_revenue
         kind: quant
         importance: critical
@@ -276,6 +280,7 @@ hypotheses:
   - id: inventory_seasonality
     code: INV-4
     anomaly_type: inventory_increase
+    direction: both
     claim: Tồn kho tăng do yếu tố mùa vụ.
     business_rationale: Tiêu thụ thép xây dựng giảm vào mùa mưa và tăng vào mùa xây dựng; doanh nghiệp tích hàng trước mùa cao điểm.
     expected_quantitative_evidence:
@@ -288,7 +293,7 @@ hypotheses:
       - không có dữ liệu theo quý
     testable_with_annual_data: no   # dự kiến UNVERIFIED, phân tích ở RQ3
     sources: [S0, S13]
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: seasonal_text
         kind: text
         importance: critical
@@ -309,6 +314,7 @@ hypotheses:
   - id: inventory_price_not_volume
     code: INV-5
     anomaly_type: inventory_increase
+    direction: up
     claim: Giá trị tồn kho tăng do giá đầu vào tăng, không phải số lượng tăng.
     business_rationale: BCTC ghi tồn kho theo giá trị; giá nguyên liệu tăng làm giá trị tồn kho tăng dù lượng không đổi.
     expected_quantitative_evidence:
@@ -323,7 +329,7 @@ hypotheses:
     testable_with_annual_data: partial
     sources: [S0, S8, S9]
     source_strength: weak   # S8, S9 chỉ hỗ trợ gián tiếp
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: inventory_growth_tracks_input_price
         kind: quant
         importance: critical
@@ -370,6 +376,7 @@ hypotheses:
   - id: inventory_accounting_policy_change
     code: INV-6
     anomaly_type: inventory_increase
+    direction: both
     claim: Biến động tồn kho do thay đổi chính sách kế toán hàng tồn kho.
     business_rationale: VAS 02 yêu cầu áp dụng nhất quán phương pháp tính giá; thay đổi phương pháp làm thay đổi giá trị tồn kho mà không phản ánh kinh doanh.
     expected_quantitative_evidence:
@@ -382,7 +389,7 @@ hypotheses:
       - không trích được đoạn chính sách kế toán của một trong hai năm
     testable_with_annual_data: yes
     sources: [S0, S14]
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: policy_change_text
         kind: text
         importance: critical
@@ -404,6 +411,7 @@ hypotheses:
   - id: inventory_goods_in_transit_timing
     code: INV-7
     anomaly_type: inventory_increase
+    direction: up
     claim: Tồn kho tăng do hàng mua đang đi đường hoặc thời điểm nhập hàng sát cuối kỳ.
     business_rationale: Doanh nghiệp nhập khẩu nguyên liệu ghi nhận hàng đi đường vào tồn kho; lô hàng lớn về sát ngày khóa sổ làm tồn kho cuối kỳ tăng tạm thời.
     expected_quantitative_evidence:
@@ -417,7 +425,7 @@ hypotheses:
     testable_with_annual_data: yes
     sources: [S3, S8]
     extension_beyond_midterm: true
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: goods_in_transit_main_driver
         kind: quant
         importance: critical
@@ -464,6 +472,7 @@ hypotheses:
   - id: margin_selling_price
     code: GM-1
     anomaly_type: gross_margin_change
+    direction: both
     claim: Biên gộp thay đổi do giá bán thép thay đổi.
     business_rationale: Giá bán biến động nhanh hơn giá vốn đã ghi nhận làm biên gộp dịch chuyển.
     expected_quantitative_evidence:
@@ -476,7 +485,7 @@ hypotheses:
       - không có giá bán bình quân của doanh nghiệp
     testable_with_annual_data: partial
     sources: [S2, S5, S10]
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: steel_price_same_direction
         kind: quant
         importance: critical
@@ -532,6 +541,7 @@ hypotheses:
   - id: margin_input_cost_lag
     code: GM-2
     anomaly_type: gross_margin_change
+    direction: both
     claim: Biên gộp thay đổi do giá nguyên liệu đầu vào thay đổi, có độ trễ.
     business_rationale: Nguyên liệu chiếm 65–75% giá vốn; quặng sắt và than cốc (doanh nghiệp lò cao) hoặc HRC (doanh nghiệp tôn mạ) quyết định chênh lệch giá bán – giá vốn.
     expected_quantitative_evidence:
@@ -545,7 +555,7 @@ hypotheses:
       - không có chuỗi giá đầu vào phù hợp với loại doanh nghiệp
     testable_with_annual_data: partial
     sources: [S2, S4, S5, S10]
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: input_price_opposite_direction
         kind: quant
         importance: critical
@@ -603,6 +613,7 @@ hypotheses:
   - id: margin_inventory_cost_effect
     code: GM-3
     anomaly_type: gross_margin_change
+    direction: both
     claim: Biên gộp thay đổi do hàng tồn kho mua giá cao (khi giá giảm) hoặc giá thấp (khi giá tăng).
     business_rationale: Giá vốn theo bình quân gia quyền phản ánh giá mua trước đó; tồn kho lớn khuếch đại tác động của biến động giá lên biên gộp.
     expected_quantitative_evidence:
@@ -619,7 +630,7 @@ hypotheses:
     testable_with_annual_data: partial
     sources: [S3, S6, S7, S8, S9]
     extension_beyond_midterm: true
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: opening_inventory_large
         kind: quant
         importance: critical
@@ -687,6 +698,7 @@ hypotheses:
   - id: margin_inventory_provision
     code: GM-4
     anomaly_type: gross_margin_change
+    direction: both
     claim: Biên gộp thay đổi do trích lập hoặc hoàn nhập dự phòng giảm giá hàng tồn kho.
     business_rationale: Dự phòng theo giá trị thuần có thể thực hiện được (VAS 02); trích lập kéo biên xuống, hoàn nhập đẩy biên lên.
     expected_quantitative_evidence:
@@ -701,7 +713,7 @@ hypotheses:
     testable_with_annual_data: yes
     sources: [S4, S5, S6, S14]
     extension_beyond_midterm: true
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: provision_moves
         kind: quant
         importance: critical
@@ -749,6 +761,7 @@ hypotheses:
   - id: margin_product_market_mix
     code: GM-5
     anomaly_type: gross_margin_change
+    direction: both
     claim: Biên gộp thay đổi do cơ cấu sản phẩm hoặc thị trường (nội địa/xuất khẩu) thay đổi.
     business_rationale: Sản phẩm và thị trường có biên khác nhau (thép xây dựng được bảo hộ thuế nhập khẩu, HRC và tôn mạ hướng xuất khẩu chịu cạnh tranh).
     expected_quantitative_evidence:
@@ -762,7 +775,7 @@ hypotheses:
     testable_with_annual_data: partial
     sources: [S2, S3, S10]
     extension_beyond_midterm: true
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: segment_revenue_shift
         kind: quant
         importance: critical
@@ -794,6 +807,7 @@ hypotheses:
   - id: margin_capacity_utilization
     code: GM-6
     anomaly_type: gross_margin_change
+    direction: both
     claim: Biên gộp thay đổi do công suất sử dụng thay đổi (chi phí cố định phân bổ trên sản lượng).
     business_rationale: Dừng hoặc tái khởi động lò cao làm chi phí cố định trên mỗi tấn thay đổi.
     expected_quantitative_evidence:
@@ -808,7 +822,7 @@ hypotheses:
     testable_with_annual_data: partial
     sources: [S5, S7, S15]
     extension_beyond_midterm: true
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: production_volume_change
         kind: quant
         importance: critical
@@ -856,6 +870,7 @@ hypotheses:
   - id: margin_new_project_depreciation
     code: GM-7
     anomaly_type: gross_margin_change
+    direction: down
     claim: Biên gộp giảm do khấu hao tăng khi dự án mới đi vào vận hành.
     business_rationale: Tài sản mới chuyển từ XDCB dở dang sang tài sản cố định bắt đầu trích khấu hao vào giá vốn.
     expected_quantitative_evidence:
@@ -869,7 +884,7 @@ hypotheses:
     testable_with_annual_data: yes
     sources: [S5, S7]
     extension_beyond_midterm: true
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: cip_transfer_large
         kind: quant
         importance: critical
@@ -923,6 +938,7 @@ hypotheses:
   - id: margin_trade_policy_fx
     code: GM-8
     anomaly_type: gross_margin_change
+    direction: both
     claim: Biên gộp thay đổi do biện pháp phòng vệ thương mại hoặc biến động tỷ giá.
     business_rationale: Thuế chống bán phá giá ở thị trường xuất khẩu ép giá bán; tỷ giá ảnh hưởng giá nguyên liệu nhập khẩu.
     expected_quantitative_evidence:
@@ -938,7 +954,7 @@ hypotheses:
     testable_with_annual_data: partial
     sources: [S2, S10, S11, S12]
     extension_beyond_midterm: true
-    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool; tool chốt ở Phase 8
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24, đã rà sau review Phase 8): nhóm rà ngưỡng/tool
       - id: usd_vnd_moved
         kind: quant
         importance: critical
@@ -990,5 +1006,538 @@ hypotheses:
         polarity: contradict
         queries:
         - không có biện pháp phòng vệ thương mại mới
+    status: draft
+    reviewed_by: null
+
+  # ---------- Tồn kho giảm bất thường (direction: down) ----------
+
+  - id: inventory_strong_demand_drawdown
+    code: DEC-1
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho giảm do nhu cầu mạnh, bán vượt kỳ vọng.
+    business_rationale: Tồn kho giảm thường cho thấy doanh số cao hơn kỳ vọng và lợi nhuận tốt hơn (tín hiệu tồn kho của Lev & Thiagarajan).
+    expected_quantitative_evidence:
+      - net_revenue tăng
+      - finished_goods giảm
+      - số ngày tồn kho giảm
+      - (Δ tồn kho) − (Δ doanh thu) < 0
+    expected_textual_evidence: [tiêu thụ tăng, đơn hàng tăng]
+    contradictory_evidence:
+      - doanh thu giảm
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources: [S16]
+    source_strength: medium   # chỉ có nguồn học thuật chung
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
+      - id: revenue_up
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: net_revenue
+        pass_when:
+          op: '>='
+          value: 0.05
+      - id: inventory_falls_below_revenue
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_gap
+        params:
+          a: inventory_total
+          b: net_revenue
+        pass_when:
+          op: <
+          value: 0
+      - id: finished_goods_down
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: finished_goods
+        pass_when:
+          op: <=
+          value: -0.1
+      - id: dio_down
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: days_inventory_change
+        params: {}
+        pass_when:
+          op: <
+          value: 0
+      - id: revenue_down
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: growth_yoy
+        params:
+          metric: net_revenue
+        pass_when:
+          op: <=
+          value: -0.05
+      - id: strong_demand_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - tiêu thụ tăng
+        - đơn hàng tăng
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_active_destocking
+    code: DEC-2
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho giảm do doanh nghiệp chủ động giảm tồn kho để hạn chế rủi ro giá giảm và giải phóng vốn lưu động.
+    business_rationale: Khi dự báo giá giảm, doanh nghiệp hạn chế mua mới nguyên liệu, kiểm soát số ngày tồn kho để tránh giá vốn cao và cải thiện dòng tiền.
+    expected_quantitative_evidence:
+      - raw_materials giảm mạnh
+      - inventory_change_cf* (lưu chuyển tiền tệ mã 10) dương
+      - phải trả người bán giảm
+      - doanh thu không giảm tương ứng
+    expected_textual_evidence: [tối ưu hàng tồn kho, hạn chế mua mới, kiểm soát hàng tồn kho]
+    contradictory_evidence:
+      - mức giảm nằm ở thành phẩm và doanh thu tăng mạnh (nghiêng về DEC-1)
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources: [S5, S17, S18, S22]
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
+      - id: raw_materials_down
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: raw_materials
+        pass_when:
+          op: <=
+          value: -0.2
+      - id: inventory_change_cf_positive
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: metric_level
+        params:
+          metric: inventory_change_cf
+        pass_when:
+          op: '>'
+          value: 0
+      - id: payables_down
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: accounts_payable
+        pass_when:
+          op: <
+          value: 0
+      - id: revenue_not_down
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: net_revenue
+        pass_when:
+          op: '>='
+          value: -0.05
+      - id: finished_goods_main_driver
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: share_of_change
+        params:
+          component: finished_goods
+          total: inventory_total
+        pass_when:
+          op: '>='
+          value: 0.5
+      - id: revenue_strong
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: growth_yoy
+        params:
+          metric: net_revenue
+        pass_when:
+          op: '>='
+          value: 0.2
+      - id: destocking_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - tối ưu hàng tồn kho
+        - hạn chế mua mới
+        - kiểm soát hàng tồn kho
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_production_cut
+    code: DEC-3
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho giảm do cắt giảm sản xuất khi nhu cầu yếu.
+    business_rationale: Doanh nghiệp dừng lò, giảm công suất để không tích thêm hàng khi tiêu thụ chậm; sản xuất giảm nhanh hơn tiêu thụ làm tồn kho giảm.
+    expected_quantitative_evidence:
+      - raw_materials và wip giảm
+      - net_revenue giảm
+      - biên gộp giảm
+      - sản lượng giảm (báo cáo thường niên)
+    expected_textual_evidence: [dừng lò, giảm công suất, hoạt động cầm chừng]
+    contradictory_evidence:
+      - sản lượng ổn định
+    required_external_data: []
+    critical_missing_evidence:
+      - BCTC không công bố sản lượng
+    testable_with_annual_data: partial
+    sources: [S5, S18, S20, S21, S22]
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
+      - id: production_volume_down
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: production_volume
+        pass_when:
+          op: <=
+          value: -0.1
+      - id: production_cut_text
+        kind: text
+        importance: critical
+        polarity: support
+        queries:
+        - dừng lò
+        - giảm công suất
+        - hoạt động cầm chừng
+      - id: raw_materials_down
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: raw_materials
+        pass_when:
+          op: <=
+          value: -0.1
+      - id: wip_down
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: work_in_progress
+        pass_when:
+          op: <=
+          value: -0.1
+      - id: revenue_down
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: net_revenue
+        pass_when:
+          op: <=
+          value: -0.05
+      - id: gross_margin_down
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: share_shift
+        params:
+          metric: gross_margin
+        pass_when:
+          op: <
+          value: 0
+      - id: production_stable
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: growth_yoy
+        params:
+          metric: production_volume
+        pass_when:
+          op: <
+          value: 0.03
+          abs: true
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_price_decline_value
+    code: DEC-4
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Giá trị tồn kho giảm do giá đầu vào giảm, số lượng không đổi.
+    business_rationale: BCTC ghi tồn kho theo giá trị; giá nguyên liệu giảm làm giá trị tồn kho giảm dù lượng không đổi.
+    expected_quantitative_evidence:
+      - mức giảm giá trị tồn kho xấp xỉ mức giảm giá nguyên liệu
+    expected_textual_evidence: [số lượng tồn kho (báo cáo thường niên)]
+    contradictory_evidence:
+      - giá đầu vào tăng trong khi tồn kho giảm
+    required_external_data: [iron_ore_price, hrc_price]
+    critical_missing_evidence:
+      - BCTC không công bố số lượng tồn kho
+    testable_with_annual_data: partial
+    sources: [S0, S8, S17]
+    source_strength: weak
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
+      - id: inventory_growth_tracks_input_price
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_vs_series
+        params:
+          metric: inventory_total
+          series: &id001
+          - iron_ore_price
+          - hrc_price
+        pass_when:
+          op: <=
+          value: 0.1
+          abs: true
+          any: true
+      - id: input_price_down
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: lagged_external_series
+        params:
+          series: *id001
+          lag: from_config
+        pass_when:
+          op: <
+          value: 0
+          any: true
+      - id: input_price_up
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: lagged_external_series
+        params:
+          series: *id001
+          lag: from_config
+        pass_when:
+          op: '>'
+          value: 0
+          any: true
+      - id: quantity_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - số lượng tồn kho
+        - sản lượng tồn kho
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_writedown_provision
+    code: DEC-5
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho ròng giảm do trích lập dự phòng giảm giá hàng tồn kho.
+    business_rationale: Theo VAS 02, khi giá trị thuần có thể thực hiện được thấp hơn giá gốc phải lập dự phòng, làm tồn kho ròng giảm.
+    expected_quantitative_evidence:
+      - inventory_net giảm nhiều hơn inventory_gross
+      - inventory_provision tăng
+      - inventory_provision_charge* (thuyết minh giá vốn) lớn
+    expected_textual_evidence: [trích lập dự phòng giảm giá hàng tồn kho]
+    contradictory_evidence:
+      - tồn kho gộp và ròng giảm tương đương
+      - dự phòng ổn định
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources: [S6, S14, S18]
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
+      - id: net_falls_more_than_gross
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_gap
+        params:
+          a: inventory_total
+          b: inventory_gross
+        pass_when:
+          op: <
+          value: 0
+      - id: provision_up
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: inventory_provision
+        pass_when:
+          op: '>='
+          value: 0.2
+      - id: provision_charge_large
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: ratio_of_changes
+        params:
+          numerator: inventory_provision_charge
+          denominator: inventory_total
+          numerator_mode: level
+        pass_when:
+          op: '>='
+          value: 0.3
+      - id: gross_and_net_move_together
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: growth_gap
+        params:
+          a: inventory_total
+          b: inventory_gross
+        pass_when:
+          op: <
+          value: 0.02
+          abs: true
+      - id: provision_stable
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: growth_yoy
+        params:
+          metric: inventory_provision
+        pass_when:
+          op: <
+          value: 0.05
+          abs: true
+      - id: writedown_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - trích lập dự phòng giảm giá hàng tồn kho
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_clearance_discount
+    code: DEC-6
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho giảm do doanh nghiệp xả hàng, bán giảm giá để giải phóng tồn kho giá cao.
+    business_rationale: Khi giá bán giảm liên tục, doanh nghiệp phải cạnh tranh đầu ra và chấp nhận biên thấp để giải phóng thành phẩm giá vốn cao.
+    expected_quantitative_evidence:
+      - finished_goods giảm
+      - biên gộp giảm cùng kỳ
+      - doanh thu không giảm tương ứng
+    expected_textual_evidence: [giảm giá bán, cạnh tranh đầu ra, giải phóng hàng tồn kho]
+    contradictory_evidence:
+      - biên gộp ổn định hoặc tăng
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources: [S3, S17]
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
+      - id: finished_goods_down
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: finished_goods
+        pass_when:
+          op: <=
+          value: -0.1
+      - id: gross_margin_down
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: share_shift
+        params:
+          metric: gross_margin
+        pass_when:
+          op: <
+          value: 0
+      - id: revenue_not_down
+        kind: quant
+        importance: supporting
+        polarity: support
+        tool: growth_yoy
+        params:
+          metric: net_revenue
+        pass_when:
+          op: '>='
+          value: -0.05
+      - id: gross_margin_stable_or_up
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: share_shift
+        params:
+          metric: gross_margin
+        pass_when:
+          op: '>='
+          value: 0
+      - id: discount_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - giảm giá bán
+        - cạnh tranh đầu ra
+        - giải phóng hàng tồn kho
+    status: draft
+    reviewed_by: null
+
+  - id: inventory_goods_in_transit_timing_down
+    code: DEC-7
+    anomaly_type: inventory_increase
+    direction: down
+    claim: Tồn kho giảm do hàng mua đang đi đường giảm hoặc thời điểm nhập hàng cuối kỳ.
+    business_rationale: Lô nhập khẩu lớn chưa về trước ngày khóa sổ làm tồn kho cuối kỳ thấp tạm thời.
+    expected_quantitative_evidence:
+      - goods_in_transit* giảm và chiếm phần lớn mức giảm tồn kho
+    expected_textual_evidence: [hàng mua đang đi trên đường]
+    contradictory_evidence:
+      - hàng đi đường ổn định
+    required_external_data: []
+    critical_missing_evidence: []
+    testable_with_annual_data: yes
+    sources: [S3, S8]
+    extension_beyond_midterm: true
+    checks:   # ĐỀ XUẤT của Claude (2026-10-24): nhóm rà ngưỡng/tool
+      - id: goods_in_transit_main_driver
+        kind: quant
+        importance: critical
+        polarity: support
+        tool: share_of_change
+        params:
+          component: goods_in_transit
+          total: inventory_total
+        pass_when:
+          op: '>='
+          value: 0.5
+      - id: in_transit_text
+        kind: text
+        importance: supporting
+        polarity: support
+        queries:
+        - hàng mua đang đi trên đường
+      - id: goods_in_transit_stable
+        kind: quant
+        importance: supporting
+        polarity: contradict
+        tool: growth_yoy
+        params:
+          metric: goods_in_transit
+        pass_when:
+          op: <
+          value: 0.05
+          abs: true
     status: draft
     reviewed_by: null

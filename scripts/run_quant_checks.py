@@ -72,8 +72,8 @@ def main(argv: list[str]) -> int:
         for h in hypotheses:
             if h.anomaly_type != a.type:
                 continue
-            if not hypothesis_applies(h, a.direction, v_settings):
-                skipped[f"{a.type}/{a.direction}"] += 1  # thư viện chưa có giả thuyết cho hướng này
+            if not hypothesis_applies(h, a.direction):
+                skipped[f"{a.type}/{a.direction}"] += 1  # giả thuyết không giải thích hướng này
                 continue
             checks = {c.id: c for c in h.checks}
             for cid, r in run_quant_checks(h, ctx).items():
@@ -101,7 +101,7 @@ def main(argv: list[str]) -> int:
     by_status = Counter(r[9] for r in rows)
     for key, n in skipped.items():
         print(
-            f"  bỏ qua {n} cặp (bất thường × giả thuyết) vì thư viện chưa có giả thuyết cho {key}"
+            f"  bỏ qua {n} cặp (bất thường × giả thuyết) vì giả thuyết không giải thích hướng {key}"
         )
     print(f"{len(result.anomalies)} bất thường × giả thuyết → {len(rows)} kết quả check → {path}")
     print(dict(by_status))

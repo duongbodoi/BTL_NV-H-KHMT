@@ -18,7 +18,7 @@ min_source_chars: 8
 
 # Tên `tool` được phép trong check `quant` = registry ở src/steel_xai/verification/tools.py
 # (test kiểm hai danh sách này trùng nhau). Thêm tool mới thì thêm vào cả hai nơi.
-known_tools: [growth_yoy, growth_gap, days_inventory_change, ratio, ratio_change, ratio_of_changes, share_of_change, share_shift, growth_vs_peer, growth_vs_history, lagged_external_series, percentile_vs_history, growth_vs_series]
+known_tools: [metric_level, growth_yoy, growth_gap, days_inventory_change, ratio, ratio_change, ratio_of_changes, share_of_change, share_shift, growth_vs_peer, growth_vs_history, lagged_external_series, percentile_vs_history, growth_vs_series]
 
 # Nguồn trong `sources` có thể là mã trong danh mục (ví dụ S0..S16) hoặc mô tả đầy đủ. Khi `reviewed`,
 # mã phải xuất hiện trong file danh mục `sources_catalog`; chưa có file đó thì giả thuyết dùng mã

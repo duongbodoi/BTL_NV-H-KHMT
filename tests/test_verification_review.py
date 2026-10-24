@@ -40,15 +40,18 @@ def test_contra_metric_growth_uses_magnitude_of_negative_balances():
     not_evaluable("growth_yoy", {"metric": "inventory_total"}, ctx(neg), "<= 0")
 
 
-def test_hypotheses_are_not_applied_to_directions_the_library_does_not_cover():
-    def hyp(t):
-        return Hypothesis("h", t, "c", "r", (), (), (), (), ())
+def test_hypotheses_apply_only_to_the_direction_they_explain():
+    def hyp(direction):
+        return Hypothesis(
+            "h", "inventory_increase", "c", "r", (), (), (), (), (), direction=direction
+        )
 
-    assert hypothesis_applies(hyp("inventory_increase"), "up", S)
-    assert not hypothesis_applies(hyp("inventory_increase"), "down", S)
-    assert hypothesis_applies(hyp("gross_margin_change"), "down", S)
-    assert not hypothesis_applies(hyp("gross_margin_change"), None, S)
-    assert not hypothesis_applies(hyp("unknown_type"), "up", S)
+    assert hypothesis_applies(hyp("up"), "up") and not hypothesis_applies(hyp("up"), "down")
+    assert hypothesis_applies(hyp("down"), "down") and not hypothesis_applies(hyp("down"), "up")
+    assert hypothesis_applies(hyp("both"), "up") and hypothesis_applies(hyp("both"), "down")
+    # chưa khai direction, hoặc bất thường không có hướng → không áp dụng (không đoán)
+    assert not hypothesis_applies(hyp(None), "up") and not hypothesis_applies(hyp(None), "down")
+    assert not hypothesis_applies(hyp("both"), None)
 
 
 def test_ratio_can_use_different_periods_for_numerator_and_denominator():

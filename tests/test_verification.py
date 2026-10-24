@@ -3,6 +3,7 @@
 import datetime as dt
 from dataclasses import replace
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -571,7 +572,11 @@ def test_registry_matches_library_tool_names_and_config():
 
 
 def test_every_tool_is_exercised_by_a_test_in_this_file():
-    src = open(__file__, encoding="utf-8").read()
+    here = Path(__file__).parent
+    src = "".join(
+        p.read_text(encoding="utf-8")
+        for p in (*here.glob("test_verification*.py"), here / "test_price_import.py")
+    )
     for name in TOOLS:
         assert f'"{name}"' in src, name
 

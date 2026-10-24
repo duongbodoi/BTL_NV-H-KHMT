@@ -362,3 +362,9 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+**Cập nhật cuối (cùng ngày), theo yêu cầu của nhóm:**
+- Nhóm thêm `iron_ore_price.xlsx` (World Bank, 2015–2024) và `library_draft_new.yaml` (22 giả thuyết, có `direction`, 7 giả thuyết giảm tồn kho) và giao Claude tự quyết cách xử lý chỉ tiêu chưa trích.
+- Claude: viết importer xlsx → CSV (`scripts/import_price_xlsx.py`), chuyển file giá vào `data/external/`, gộp thư viện mới (giữ nguyên nội dung nhóm, soạn `checks` đề xuất cho DEC-1..7), thêm trường `direction` và tool `metric_level`, thêm 4 chỉ tiêu vào `configs/normalization.yaml` (`accounts_payable`, `goods_in_transit`, `depreciation`, `inventory_change_cf`) sau khi so sánh trước/sau (fact cũ giữ nguyên) và đối chiếu giá trị với OCR gốc.
+- Claude tự quyết (nhóm giao): trích thêm chỉ tiêu bằng cấu hình thay vì để NOT_EVALUABLE; không trích chỉ tiêu cần báo cáo thường niên hoặc khi OCR gộp dòng; hướng giả thuyết lấy từ chính giả thuyết (bỏ cấu hình riêng).
+- **Chưa review độc lập** cho phần cập nhật này; test tự động 786 passed. Người cần: rà `checks` DEC-1..7, đọc lại ngưỡng, xem NKG/HSG còn thiếu chỉ tiêu nào, bổ sung giá 2014 và các chuỗi giá còn lại.

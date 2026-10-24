@@ -32,11 +32,5 @@ contra_metrics: [inventory_provision]
 
 # Metric mà Phase 3 CHƯA trích nhưng thư viện giả thuyết đã nhắc (dấu * trong library_draft.yaml).
 # Check dùng chúng ra NOT_EVALUABLE tới khi trích thêm; tên nằm ở đây để bắt lỗi gõ sai tên metric.
-planned_metrics: [goods_in_transit, accounts_payable, inventory_provision_charge, segment_revenue, export_revenue_share, production_volume, depreciation, cip_transfer_to_fixed_assets]
-
-# Hướng bất thường mà thư viện giả thuyết hiện có áp dụng. Thư viện chỉ nêu nguyên nhân của
-# "tồn kho TĂNG"; chưa có giả thuyết cho tồn kho giảm, nên không chạy giả thuyết tồn kho trên ca
-# giảm (chạy sẽ biến bằng chứng ngược hướng thành bằng chứng ủng hộ). Nhóm đổi khi soạn thêm.
-applicable_directions:
-  inventory_increase: [up]
-  gross_margin_change: [up, down]
+# (accounts_payable, goods_in_transit, depreciation, inventory_change_cf đã được trích từ 2026-10-24.)
+planned_metrics: [inventory_provision_charge, segment_revenue, export_revenue_share, production_volume, cip_transfer_to_fixed_assets]

@@ -5,6 +5,10 @@ Nội dung do **nhóm soạn** (`library_draft.yaml`, 7 giả thuyết tồn kho
 
 Kiểm nhanh: `python -c "from steel_xai.hypotheses import load_library; print(load_library().coverage())"`
 
+## Hướng (`direction`)
+
+Mỗi giả thuyết khai `direction`: `up` (giải thích bất thường tăng), `down` (giảm) hoặc `both`. Kiểm chứng chỉ chạy giả thuyết trên bất thường cùng hướng. Bắt buộc khi `reviewed`. Thư viện hiện có 14 giả thuyết tồn kho (7 giải thích tăng, 7 giải thích giảm: DEC-1..7; INV-4 và INV-6 là `both`) và 8 giả thuyết biên gộp.
+
 ## Định dạng file
 
 - Một file có thể chứa nhiều giả thuyết: gốc là `hypotheses: [...]` (như `library_draft.yaml`), hoặc một giả thuyết/file với tên `<id>.yaml`.

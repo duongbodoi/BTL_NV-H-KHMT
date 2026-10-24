@@ -140,6 +140,34 @@ metrics:
     expected_sign: negative   # báo cáo ghi chi ra là số âm
     flip_sign: true           # fact lưu độ lớn dương; số dương bất ngờ → UNRESOLVED (unexpected_sign)
 
+  # --- Thêm 2026-10-24 (Phase 8) cho các check của thư viện giả thuyết. Mã số theo TT200.
+  accounts_payable:
+    kind: stock
+    aliases: ["phải trả người bán ngắn hạn", "phải trả cho người bán ngắn hạn"]
+    structured_aliases: []
+    codes: ["311"]
+  depreciation:
+    kind: flow
+    aliases:
+      - "khấu hao và phân bổ"
+      - "khẩu hao và phân bổ"
+      - "khấu hao tài sản cố định"
+      - "khấu hao tài sản cố định và bất động sản đầu tư"
+      - "khấu hao và hao mòn tài sản cố định và bất động sản đầu tư"
+    structured_aliases: []
+    requires_table_labels: ["lưu chuyển tiền thuần từ hoạt động kinh doanh"]   # chỉ lấy ở báo cáo lưu chuyển tiền tệ
+  inventory_change_cf:
+    kind: flow
+    aliases: ["biến động hàng tồn kho", "tăng giảm hàng tồn kho", "giảm tăng hàng tồn kho"]
+    structured_aliases: []
+    requires_table_labels: ["lưu chuyển tiền thuần từ hoạt động kinh doanh"]   # số dương = hàng tồn kho GIẢM (giải phóng tiền)
+  goods_in_transit:
+    kind: stock
+    aliases: ["hàng mua đang đi trên đường", "hàng đang đi trên đường", "hàng mua đang đi đường", "hàng đang đi đường"]
+    structured_aliases: []
+    column_includes: ["giá gốc"]
+    requires_table_labels: ["thành phẩm"]
+
 # Metric dẫn xuất do code tính (không do LLM).
 derived:
   gross_margin:

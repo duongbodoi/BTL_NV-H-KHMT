@@ -204,13 +204,12 @@ def run_quant_checks(hypothesis: Hypothesis, ctx: CheckContext) -> dict[str, Che
     return {c.id: run_check(c, ctx) for c in hypothesis.checks if c.kind == "quant"}
 
 
-def hypothesis_applies(
-    hypothesis: Hypothesis, direction: str | None, settings: VerificationSettings
-) -> bool:
-    """Giả thuyết có áp dụng cho hướng này của bất thường không (`applicable_directions`).
+def hypothesis_applies(hypothesis: Hypothesis, direction: str | None) -> bool:
+    """Giả thuyết có giải thích bất thường theo hướng này không (`Hypothesis.direction`).
 
-    Thư viện hiện chỉ có nguyên nhân của tồn kho TĂNG; chạy chúng trên ca giảm sẽ biến bằng chứng
-    ngược hướng thành bằng chứng ủng hộ. Loại bất thường lạ → không áp dụng.
+    Giả thuyết "tồn kho tăng do…" chạy trên ca tồn kho giảm sẽ biến bằng chứng ngược hướng thành
+    bằng chứng ủng hộ, nên giả thuyết chưa khai `direction` không áp dụng cho hướng nào.
     """
-    allowed = settings.applicable_directions.get(hypothesis.anomaly_type)
-    return allowed is not None and direction in allowed
+    if direction not in ("up", "down"):
+        return False
+    return hypothesis.direction == "both" or hypothesis.direction == direction

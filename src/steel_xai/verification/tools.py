@@ -105,6 +105,12 @@ def growth_yoy(ctx: CheckContext, p: dict[str, Any]) -> ToolOutput:
     return _one(_growth(ctx, led, p["metric"]), led)
 
 
+def metric_level(ctx: CheckContext, p: dict[str, Any]) -> ToolOutput:
+    """Giá trị của một metric ở kỳ đang xét, đúng dấu như báo cáo (ví dụ dòng tiền)."""
+    led = Ledger()
+    return _one(_fv(ctx, led, p["metric"], ctx.year), led)
+
+
 def growth_gap(ctx: CheckContext, p: dict[str, Any]) -> ToolOutput:
     """Tăng trưởng YoY của a trừ tăng trưởng YoY của b."""
     led = Ledger()
@@ -423,6 +429,7 @@ TOOLS: dict[str, ToolSpec] = {
     s.name: s
     for s in (
         _spec(growth_yoy, {"metric": _M}, _S({"metric"})),
+        _spec(metric_level, {"metric": _M}, _S({"metric"})),
         _spec(growth_gap, {"a": _M, "b": _M}, _S({"a", "b"})),
         _spec(days_inventory_change, {}, _S()),
         _spec(

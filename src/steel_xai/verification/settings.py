@@ -29,7 +29,6 @@ class VerificationSettings:
     reference_only_from_year: int
     contra_metrics: frozenset[str]
     known_metrics: frozenset[str]
-    applicable_directions: dict[str, tuple[str, ...]]
 
 
 def _int(v: Any, where: str, minimum: int) -> int:
@@ -78,14 +77,6 @@ def load_verification_settings(
     known = frozenset(metrics | set(lists["planned_metrics"]))
     if not set(lists["contra_metrics"]) <= known:
         raise ConfigError("verification.contra_metrics có metric không biết")
-    directions = cfg.get("applicable_directions")
-    if not isinstance(directions, dict) or not directions:
-        raise ConfigError("verification.applicable_directions phải là mapping không rỗng")
-    for t, ds in directions.items():
-        if not isinstance(ds, list) or not ds or not set(ds) <= {"up", "down"}:
-            raise ConfigError(
-                f"verification.applicable_directions.{t} phải là danh sách con của [up, down]"
-            )
     hist = cfg.get("history") or {}
     peers = cfg.get("peers") or {}
     ref = dataset.get("reference_only_from_year")
@@ -111,5 +102,4 @@ def load_verification_settings(
         reference_only_from_year=ref,
         contra_metrics=frozenset(lists["contra_metrics"]),
         known_metrics=known,
-        applicable_directions={t: tuple(ds) for t, ds in directions.items()},
     )
