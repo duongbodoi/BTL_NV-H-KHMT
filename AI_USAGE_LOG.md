@@ -368,3 +368,30 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 - Claude: viết importer xlsx → CSV (`scripts/import_price_xlsx.py`), chuyển file giá vào `data/external/`, gộp thư viện mới (giữ nguyên nội dung nhóm, soạn `checks` đề xuất cho DEC-1..7), thêm trường `direction` và tool `metric_level`, thêm 4 chỉ tiêu vào `configs/normalization.yaml` (`accounts_payable`, `goods_in_transit`, `depreciation`, `inventory_change_cf`) sau khi so sánh trước/sau (fact cũ giữ nguyên) và đối chiếu giá trị với OCR gốc.
 - Claude tự quyết (nhóm giao): trích thêm chỉ tiêu bằng cấu hình thay vì để NOT_EVALUABLE; không trích chỉ tiêu cần báo cáo thường niên hoặc khi OCR gộp dòng; hướng giả thuyết lấy từ chính giả thuyết (bỏ cấu hình riêng).
 - **Chưa review độc lập** cho phần cập nhật này; test tự động 786 passed. Người cần: rà `checks` DEC-1..7, đọc lại ngưỡng, xem NKG/HSG còn thiếu chỉ tiêu nào, bổ sung giá 2014 và các chuỗi giá còn lại.
+
+## 2026-10-24 — Phase 9 (LLM reasoning integration)
+
+**Công cụ:** Claude Code (Claude Sonnet 5.5).
+
+**Bối cảnh:** nhóm yêu cầu làm Phase 9 ("nếu không có gì quá nghiêm trọng") khi Phase 6–8 chưa COMPLETED và phần cập nhật cuối của Phase 8 chưa qua review độc lập. Claude đã nêu điều này.
+
+**Việc Claude đã làm:**
+- Audit-first: `llm/` rỗng; `configs/llm.yaml` chỉ có khung (model, temperature null). Đọc tài liệu API hiện hành (skill claude-api) trước khi viết client: phát hiện model hiện tại từ chối `tool_choice` ép buộc nên dùng structured output (`output_config.format`), và API từ phiên bản 2026-10-21 từ chối `temperature/top_p/top_k` nên không gửi (loader cấm đặt chúng).
+- `llm/{settings,schema,client,quotes,prompts,evidence}.py`, `contracts.Evidence/TextCheckStatus`, `scripts/run_text_evidence.py`, `tests/test_llm.py`, mở rộng `configs/llm.yaml` (model/effort/max_tokens là ĐỀ XUẤT của Claude).
+- **Chưa gọi API thật** (không có gói `anthropic` và API key trong môi trường làm việc); mọi test dùng transport giả; request của `AnthropicTransport` chỉ được đối chiếu với tài liệu và với module `anthropic` giả.
+
+**Lỗi/sai sót bắt được:**
+- Review độc lập (subagent): 0 CRITICAL, 1 HIGH, 4 MEDIUM, 5 LOW, mỗi lỗi có input tái hiện; không có rò rỉ as-of.
+  - HIGH: lỗi ghi cache/log làm mất kết quả đã trả tiền và sập pipeline.
+  - MEDIUM: prompt injection qua thuộc tính `section` và qua thẻ viết hoa/thường (cách escape cũ còn làm trích dẫn đúng bị loại oan); MISSING bị lạm dụng (chunk LLM bịa, quote rỗng); judgement đầu hỏng làm judgement sau đúng bị bỏ; truy vấn diễn đạt lại không kiểm số liệu/mã công ty.
+  - Đã sửa toàn bộ kèm ~25 test hồi quy; còn ghi nhận: `call_log` chưa xoay vòng.
+- Trong lúc làm: nhiều lệnh shell dùng heredoc bị hỏng ở môi trường này (dấu nháy/xuống dòng), nên chuyển sang ghi script bằng công cụ ghi file; bộ quét bí mật của repo từng báo nhầm một dòng gán khóa API trong client (viết lại thành hai dòng).
+
+**Phần người cần tự xác minh:**
+- **Chạy thử API thật với 1–2 ca** (`scripts/run_text_evidence.py --limit 1`) trước khi chạy hàng loạt; kiểm nhật ký token/độ trễ và chi phí.
+- Chốt `model`, `effort`, `max_tokens` trong `configs/llm.yaml` (đang là đề xuất); chúng nằm trong hash freeze.
+- Đọc thử vài kết quả phân loại: trích dẫn đúng nguyên văn **không** có nghĩa là nhãn support/contradict đúng ngữ nghĩa.
+- Quyết định có bật fallback khi mô hình từ chối (hiện chỉ ghi nhận và coi check là UNVERIFIED).
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

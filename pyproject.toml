@@ -12,6 +12,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Chỉ cần khi chạy LLM thật; test dùng transport giả nên không cần cài.
+llm = [
+    "anthropic>=1.0",
+]
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",
@@ -32,3 +36,7 @@ extend-exclude = [".venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Prompt tiếng Việt dài một dòng có chủ đích (chuỗi được băm vào freeze, không ngắt tùy ý).
+"src/steel_xai/llm/prompts.py" = ["E501"]

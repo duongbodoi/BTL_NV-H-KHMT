@@ -1,11 +1,34 @@
 # Thiết lập LLM dùng chung cho cấu hình A/B/C (spec mục 14, 16). Provider/model/tham số do nhóm chốt.
-provider: null
-model: null
-temperature: null
-max_tokens: null
+# Các giá trị dưới đây là ĐỀ XUẤT khởi điểm của Claude (2026-10-24), nhóm đổi trước khi chạy đánh giá;
+# thay đổi chúng làm hash của freeze (spec mục 15.1) lệch.
+provider: anthropic
+model: claude-opus-5-5
+# Mức nỗ lực suy luận (output_config.effort): low | medium | high | xhigh | max. Claude Opus 5.5 mặc định medium.
+effort: medium
+# Gồm cả token suy luận của mô hình, nên để dư so với JSON trả về.
+max_tokens: 8000
+timeout_s: 180
+
+# KHÔNG gửi temperature/top_p/top_k: API từ phiên bản 2026-10-21 trả 400 nếu có, và các mô hình Claude
+# 5.x chỉ nhận giá trị mặc định. Độ biến động giữa 3 lần chạy (spec mục 14) đến từ lấy mẫu mặc định của
+# mô hình, và `run_id` nằm trong khóa cache nên 3 lần chạy không trùng cache.
 
 # API key CHỈ đọc từ biến môi trường có tên này, không bao giờ ghi trong file.
-# Tên biến là giá trị tạm, đổi theo provider nhóm chọn.
 api_key_env: ANTHROPIC_API_KEY
 
 cache_dir: cache/llm
+# File nhật ký mỗi lần gọi (JSONL: token, độ trễ, cache hit, trạng thái). Rỗng = chỉ giữ trong bộ nhớ.
+call_log: data/processed/llm_calls.jsonl
+
+# Số lần gọi LẠI khi đầu ra sai schema/không phải JSON (không áp dụng cho từ chối hay bị cắt do max_tokens).
+max_retries_invalid_output: 1
+
+# Bằng chứng văn bản (spec mục 10.3, 10.4)
+evidence:
+  max_passages_per_check: 8    # số đoạn truy xuất tối đa đưa cho LLM phân loại, mỗi check
+  max_extra_queries: 3         # tối đa bấy nhiêu câu truy vấn diễn đạt lại thêm cho mỗi check
+  max_query_chars: 200
+  min_quote_chars: 20          # trích dẫn ngắn hơn bị loại (quá ngắn thì khớp tình cờ)
+  max_quote_chars: 600
+  max_reason_chars: 300
+  min_alpha_ratio: 0.4         # tỷ lệ chữ cái tối thiểu trong trích dẫn (chặn quote chỉ gồm `|` hay số)

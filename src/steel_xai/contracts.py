@@ -403,3 +403,58 @@ class CheckResult:
             inputs=tuple(CheckInput.from_dict(i) for i in d.get("inputs", ())),
             reason=d.get("reason", ""),
         )
+
+
+EVIDENCE_KINDS = ("quant", "text")
+EVIDENCE_POLARITIES = ("support", "contradict")
+
+
+@dataclass(frozen=True)
+class Evidence:
+    """Một bằng chứng đã qua kiểm của code (spec mục 18).
+
+    Bằng chứng văn bản: `quote` đã được code kiểm là chuỗi con nguyên văn (sau chuẩn hóa khoảng
+    trắng/Unicode) của đoạn gốc trong `provenance`.
+    """
+
+    kind: str
+    polarity: str
+    check_id: str
+    provenance: Provenance
+    quote: str
+    reason: str = ""  # lý do ngắn do LLM nêu (chỉ để người đọc; không dùng để kết luận)
+
+    def __post_init__(self) -> None:
+        if self.kind not in EVIDENCE_KINDS:
+            raise ValueError(f"kind phải thuộc {EVIDENCE_KINDS}, nhận {self.kind!r}")
+        if self.polarity not in EVIDENCE_POLARITIES:
+            raise ValueError(f"polarity phải thuộc {EVIDENCE_POLARITIES}, nhận {self.polarity!r}")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "polarity": self.polarity,
+            "check_id": self.check_id,
+            "provenance": self.provenance.to_dict(),
+            "quote": self.quote,
+            "reason": self.reason,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> Evidence:
+        return cls(
+            kind=d["kind"],
+            polarity=d["polarity"],
+            check_id=d["check_id"],
+            provenance=Provenance.from_dict(d["provenance"]),
+            quote=d["quote"],
+            reason=d.get("reason", ""),
+        )
+
+
+class TextCheckStatus(StrEnum):
+    """Kết quả một check văn bản (spec mục 10.3, 10.4)."""
+
+    FOUND = "FOUND"  # có bằng chứng đã kiểm, đúng chiều của check
+    MISSING = "MISSING"  # LLM nêu bằng chứng nhưng trích dẫn không qua kiểm nguyên văn → bị loại
+    UNVERIFIED = "UNVERIFIED"  # không truy xuất/không có đoạn phù hợp, hoặc không đánh giá được
