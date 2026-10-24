@@ -3,18 +3,12 @@
 - **Ngày:** 2026-10-23
 - **Thực hiện:** Claude Code (Claude Sonnet 5.5), dưới sự kiểm tra của nhóm
 - **Spec:** `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md` (v2), mục 3.2, 3.3, 7.2, 8, 20 (Phase 5), 23
-- **Trạng thái:** phần việc của Claude đã xong, đã qua 1 vòng review độc lập. **Chưa COMPLETED.** Phase 3-4 cũng chưa được nhóm đánh dấu COMPLETED (chưa spot-check PDF, chưa điền mẫu đối chiếu), nên Phase 5 xây trên đầu vào chưa xác minh hoàn toàn (spec mục 28.3); nhóm quyết định đi tiếp.
+- **Trạng thái:** **COMPLETED** (2026-10-24, theo yêu cầu của nhóm). Đã qua 2 vòng review độc lập, mọi lỗi HIGH/MEDIUM đã sửa. Lưu ý: Phase 3-4 chưa được nhóm đánh dấu COMPLETED (chưa spot-check PDF, chưa điền mẫu đối chiếu), nên Phase 5 xây trên đầu vào chưa xác minh hoàn toàn (spec mục 28.3); nhóm đã quyết định đi tiếp.
 
-## ⚠ Điều cần nhóm quyết định trước khi dùng kết quả
+## ⚠ Ngưỡng và as-of vẫn là tạm
 
-**Mọi con số ngưỡng trong `configs/anomaly.yaml` là đề xuất khởi điểm của Claude, không phải quyết định của nhóm** (spec mục 21.1: người chốt ngưỡng trên tập dev, trước khi chạy test). Vì vậy `provisional_thresholds: true` và mọi bất thường mang cờ `provisional_thresholds`. Với ngưỡng này, trên 3 công ty và giai đoạn gốc 2021–2023 (9 kỳ mỗi loại):
-
-| Loại | Kỳ xét được | Kỳ bị gắn cờ | Tỷ lệ |
-|---|---|---|---|
-| Tồn kho | 9 | 6 | 67% |
-| Biên gộp | 9 | 5 | 56% |
-
-Tỷ lệ này quá cao để có ích làm danh sách ứng viên: dữ liệu năm của ngành thép biến động mạnh, các luật so peer/lịch sử ít điểm dữ liệu nên nhạy. Nhóm nên chỉnh ngưỡng (và chọn luật nào giữ) trên 5 ca dev; engine không cần đổi code.
+- **Ngưỡng** trong `configs/anomaly.yaml` là đề xuất của Claude (đã nâng ngày 2026-10-24), không phải quyết định của nhóm (spec mục 21.1); `provisional_thresholds: true`. Trên cửa sổ chọn ca 2016–2023 (3 công ty, 20–23 kỳ xét được mỗi loại), tỷ lệ kỳ bị gắn cờ: **tồn kho 7/23 (30%), biên gộp 4/20 (20%)**, giảm từ ~70% với ngưỡng đầu. Nhóm vẫn nên rà lại trên tập dev trước khi chạy test. Test dùng ngưỡng cố định ở `tests/fixtures/anomaly_config/`, không phụ thuộc file này.
+- **As-of:** nhóm chỉ có năm công bố, không có ngày. Tạm dùng **ngày ký báo cáo kiểm toán** trích tự động từ tài liệu (`asof_source: audit_report_date`; xem `data/processed/asof_dates.csv`). Đây là xấp xỉ, thường sớm hơn hoặc bằng ngày công bố thật; Phase 7 nên coi là mốc tạm. Còn 1 kỳ không trích được (HSG FY2015, ngoài cửa sổ chọn ca).
 
 ## Phase này để làm gì?
 
@@ -94,3 +88,15 @@ Không. Không có tên công ty, trang, năm trong `src/`. Danh sách công ty 
 ## 11. Khác báo cáo giữa kỳ
 
 Có, đã nêu trong `docs/DRAFT_SPEC_CHANGES.md` (chỉ YoY, dữ liệu năm). Phase 5 không thêm điểm lệch mới; nhóm cần duyệt bản nháp.
+
+## 12. Cập nhật 2026-10-24 (sau review vòng 2)
+
+Thêm sau bản đầu: `anomaly/corpus.py` + `scripts/build_anomaly_candidates.py` (nạp bộ OCR, chạy Phase 2-4-5, xuất `data/processed/anomaly_candidates.csv` và `asof_dates.csv`), `case_selection_window` (2016–2023, NKG từ 2017) trong `configs/dataset.yaml`, hướng bất thường = dấu biến động của chính công ty (`peer_relative` chỉ là thuộc tính phụ), cờ `mixed_direction` / `candidate`, trích ngày ký kiểm toán (`normalization/context.py`). Các điểm lệch spec đã ghi nháp ở `DEVIATIONS_FROM_MIDTERM.md` và `docs/DRAFT_SPEC_CHANGES.md`; **nhóm cần duyệt**.
+
+Review vòng 2: 0 CRITICAL, 2 HIGH, 1 MEDIUM, 1 LOW. Đã sửa:
+- **HIGH – rò rỉ qua số so sánh:** kỳ y từng có thể lấy số từ cột so sánh của BCTC năm y+1 (công bố sau as-of; ví dụ NKG FY2022 biên gộp). Nay fact `comparative_only` của năm ≥ kỳ đang xét bị coi là chưa có (kỳ thành "không xét được", vẫn nằm trong mẫu số); số so sánh của năm trước vẫn được dùng.
+- **HIGH – peer công bố sau as-of:** peer có as-of muộn hơn công ty đang xét bị loại (cờ `peer_excluded_later_asof`). Nếu thiếu as-of của một bên thì giữ peer (đã có cờ `asof_date_unknown`).
+- **MEDIUM – ca chỉ do luật peer:** ví dụ HPG FY2018 tồn kho +20% nhưng gắn "up" chỉ vì peer giảm. Nay gắn cờ `peer_only_hit` và `candidate=false` (vẫn ghi vào bảng).
+- **LOW – trích ngày ký lấy nhầm dòng** (HSG FY2015 ra `unresolved`): chưa sửa; fail-safe (không ra ngày sai), ngoài cửa sổ chọn ca.
+
+Tests: toàn repo **566 passed**, `ruff check` và `ruff format --check` sạch.

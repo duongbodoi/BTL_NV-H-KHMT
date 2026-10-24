@@ -24,12 +24,23 @@ from steel_xai.parsing import Document
 _DATE_TEXT_RE = re.compile(r"ngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})", re.IGNORECASE)
 _DATE_SLASH_RE = re.compile(r"ngày\s+(\d{1,2})/(\d{1,2})/(\d{4})", re.IGNORECASE)
 
+# Ngày ký báo cáo kiểm toán: dòng chữ ký "Hà Nội, ngày 16 tháng 3 năm 2016" hoặc dòng "Ngày ..."
+# đứng riêng (kiểu cũ, sau địa danh). Chỉ nhận dòng chứa đúng ngày đó, không nhận ngày trong câu.
+_SIGNATURE_RE = re.compile(
+    r"^\s*(?:[^\W\d_][^\n,]{1,40},\s*)?ngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_AUDIT_HEADING_RE = re.compile(r"^\s*báo cáo kiểm toán độc lập\s*$", re.IGNORECASE | re.MULTILINE)
+_MAX_DAYS_AFTER_YEAR_END = 400  # ngày ký quá xa ngày khóa sổ thì không tin
+
 
 @dataclass(frozen=True)
 class DocContext:
     doc_id: str
     report_end: dt.date | None  # ngày kết thúc năm tài chính của chính báo cáo
     unit: str | None  # đơn vị suy từ văn bản tài liệu (None = không khẳng định được)
+    audit_report_date: dt.date | None = None  # ngày ký báo cáo kiểm toán (mốc as-of tạm)
+    audit_evidence: str = ""  # dòng nguyên văn đã dùng, để người tra
 
 
 def build_context(doc: Document, settings: NormalizationSettings) -> DocContext:
@@ -57,4 +68,46 @@ def build_context(doc: Document, settings: NormalizationSettings) -> DocContext:
     unit = None
     if any(s in blob for s in du.statements) and not any(s in blob for s in du.scaled_statements):
         unit = du.unit
-    return DocContext(doc.doc_id, report_end, unit)
+    audit_date, evidence = audit_report_date(doc, report_end)
+    return DocContext(doc.doc_id, report_end, unit, audit_date, evidence)
+
+
+def audit_report_date(doc: Document, report_end: dt.date | None) -> tuple[dt.date | None, str]:
+    """Ngày ký báo cáo kiểm toán độc lập, trích từ văn bản trước bảng cân đối kế toán.
+
+    Quy tắc: lấy các dòng chữ ký trước bảng báo cáo tài chính đầu tiên (bảng có cột "Mã số"); nếu
+    có tiêu đề "BÁO CÁO KIỂM TOÁN ĐỘC LẬP" thì chỉ xét các dòng sau tiêu đề đó; lấy dòng cuối cùng.
+    Phải nằm trong khoảng (ngày khóa sổ, ngày khóa sổ + 400 ngày]; ngược lại hoặc không có → `None`.
+    Không đoán: người tra tay phần không trích được.
+    """
+    if report_end is None:
+        return None, ""
+    candidates: list[tuple[dt.date, str]] = []
+    heading_at = -1
+    for page in doc.pages:
+        stop = False
+        for block in page.blocks:
+            text = unicodedata.normalize("NFC", block.text)
+            if block.kind == "table":
+                if re.search(r"mã số", text, re.IGNORECASE):
+                    stop = True
+                    break
+                continue
+            if heading_at < 0 and _AUDIT_HEADING_RE.search(text):
+                heading_at = len(candidates)
+            for m in _SIGNATURE_RE.finditer(text):
+                day, month, year = (int(g) for g in m.groups())
+                try:
+                    candidates.append((dt.date(year, month, day), m.group(0).strip()))
+                except ValueError:
+                    continue
+        if stop:
+            break
+    if heading_at >= 0:
+        candidates = candidates[heading_at:]
+    if not candidates:
+        return None, ""
+    day, evidence = candidates[-1]
+    if not 1 <= (day - report_end).days <= _MAX_DAYS_AFTER_YEAR_END:
+        return None, evidence
+    return day, evidence

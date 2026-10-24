@@ -16,6 +16,14 @@ base_period:
   start_year: 2021
   end_year: 2023
 
+# Cửa sổ chọn ca (nhóm chốt): dữ liệu là BCTC NĂM nên số kỳ ít hơn quý 4 lần; mở rộng số năm để
+# giữ cỡ mẫu. Nền lịch sử và peer vẫn dùng mọi năm trước kỳ đang xét (kể cả trước cửa sổ).
+# `company_start_year`: công ty có dữ liệu bắt đầu muộn (năm đầu chỉ là số so sánh, chưa có YoY).
+case_selection_window:
+  start_year: 2016
+  end_year: 2023
+  company_start_year: {NKG: 2017}
+
 # Dữ liệu từ năm này trở đi CHỈ dùng làm nguồn đáp án tham chiếu,
 # không vào kho RAG, không vào input của cấu hình nào (spec mục 3.3, 7.2).
 reference_only_from_year: 2024

@@ -18,11 +18,11 @@ from test_anomaly import (
     series,
 )
 
-from steel_xai.anomaly import detect_anomalies, load_anomaly_settings
+from steel_xai.anomaly import AsofEntry, detect_anomalies, load_anomaly_settings
 from steel_xai.config import ConfigError
 from steel_xai.contracts import FinancialFact, ValueStatus
 
-REAL = load_anomaly_settings()  # cấu hình thật: có dataset.companies = HPG, HSG, NKG
+REAL = load_anomaly_settings(CFG, DATASET)  # cấu hình thật: có dataset.companies = HPG, HSG, NKG
 
 
 def with_end(facts, end_md):
@@ -76,11 +76,14 @@ def test_period_with_only_broken_facts_still_counts_in_the_denominator():
 
 def test_configured_companies_without_any_data_are_listed():
     res = detect_anomalies([], REAL)
-    assert {(e.company, e.period, e.reason) for e in res.evaluations} == {
-        (c, f"FY{y}", "no_data") for c in ("HPG", "HSG", "NKG") for y in (2021, 2022, 2023)
+    expected = {
+        (c, f"FY{y}", "no_data")
+        for c, first in (("HPG", 2016), ("HSG", 2016), ("NKG", 2017))  # NKG bắt đầu muộn
+        for y in range(first, 2024)
     }
+    assert {(e.company, e.period, e.reason) for e in res.evaluations} == expected
     s = res.summary()["inventory_increase"]
-    assert s["periods_total"] == 9 and s["periods_evaluated"] == 0 and s["anomaly_rate"] is None
+    assert s["periods_total"] == 23 and s["periods_evaluated"] == 0 and s["anomaly_rate"] is None
 
 
 # ---------------- M2/M3: peer và năm tài chính lệch
@@ -205,7 +208,7 @@ def test_asof_dates_are_validated(asof):
 
 def test_asof_dates_accepted_for_known_company():
     s = _settings(_set(("asof_dates",), {"HPG": {"FY2021": "2022-03-15"}}))
-    assert s.asof_dates == {"HPG": {"FY2021": "2022-03-15"}}
+    assert s.asof_dates == {"HPG": {"FY2021": AsofEntry("2022-03-15", "manual")}}
 
 
 def test_input_order_independence_with_peers_and_duplicates():
@@ -225,3 +228,49 @@ def test_input_order_independence_with_peers_and_duplicates():
 def test_repo_configs_unchanged_by_test_helpers():
     assert CFG["provisional_thresholds"] is True and DATASET["companies"] == ["HPG", "HSG", "NKG"]
     assert isinstance(FinancialFact, type)
+
+
+# ---------------- vòng review 2 (2026-10-24)
+
+
+def test_comparative_only_fact_of_the_evaluated_year_is_not_used():
+    # số doanh thu/tồn kho năm 2021 chỉ có dưới dạng số so sánh (từ BCTC 2022, công bố SAU as-of)
+    facts = series("AAA", {2020: (100, 1000, 800, "0.2"), 2021: (200, 1000, 800, "0.2")})
+    facts = [
+        replace(f, validation_flags=("comparative_only",)) if f.period == "FY2021" else f
+        for f in facts
+    ]
+    res = detect_anomalies(facts, S, [2021])
+    assert not any(e.evaluable for e in res.evaluations if e.period == "FY2021")
+    assert res.anomalies == ()
+
+
+def test_comparative_only_fact_of_the_previous_year_is_still_used():
+    facts = series("AAA", {2020: (100, 1000, 800, "0.2"), 2021: (200, 1000, 800, "0.2")})
+    facts = [
+        replace(f, validation_flags=("comparative_only",)) if f.period == "FY2020" else f
+        for f in facts
+    ]
+    res = detect_anomalies(facts, S, [2021])
+    assert any(e.evaluable for e in res.evaluations if e.type == "inventory_increase")
+
+
+def test_peer_published_after_company_asof_is_excluded():
+    facts = _inv_only(0.20, "AAA") + _inv_only(-0.40, "BBB") + _inv_only(-0.40, "CCC")
+    asof = {
+        ("AAA", "FY2021"): AsofEntry("2022-03-01", "audit_report_date"),
+        ("BBB", "FY2021"): AsofEntry("2022-03-10", "audit_report_date"),
+        ("CCC", "FY2021"): AsofEntry("2022-02-20", "audit_report_date"),
+    }
+    res = detect_anomalies(facts, S, [2021], asof)
+    row = next(r for r in res.rows if (r.company, r.type) == ("AAA", "inventory_increase"))
+    assert "peer_excluded_later_asof" in row.flags and "peer_missing" in row.flags
+    assert "inv_growth_vs_peer" not in row.rules_hit
+
+
+def test_hit_by_peer_rule_alone_is_flagged_and_not_a_candidate():
+    facts = _inv_only(0.20, "AAA") + _inv_only(-0.40, "BBB") + _inv_only(-0.40, "CCC")
+    res = detect_anomalies(facts, S, [2021])
+    row = next(r for r in res.rows if (r.company, r.type) == ("AAA", "inventory_increase"))
+    assert row.rules_hit == ("inv_growth_vs_peer",) and row.exceeded
+    assert "peer_only_hit" in row.flags and not row.candidate

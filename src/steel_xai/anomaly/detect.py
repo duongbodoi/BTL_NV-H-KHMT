@@ -11,7 +11,7 @@ from __future__ import annotations
 import csv
 import datetime as dt
 from collections import defaultdict
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -19,7 +19,9 @@ from pathlib import Path
 from steel_xai.anomaly.settings import (
     INVENTORY,
     AnomalySettings,
+    AsofEntry,
     TypeSettings,
+    is_peer_indicator,
     load_anomaly_settings,
 )
 from steel_xai.contracts import Anomaly, FinancialFact, ValueStatus
@@ -28,10 +30,13 @@ FLAG_WEAK_BASELINE = "weak_baseline"
 FLAG_PEER_MISSING = "peer_missing"
 FLAG_PEER_FISCAL_END = "peer_fiscal_end_differs"
 FLAG_PEER_LATER_END = "peer_excluded_later_fiscal_end"
+FLAG_PEER_LATER_ASOF = "peer_excluded_later_asof"
+FLAG_PEER_ONLY_HIT = "peer_only_hit"
 FLAG_FISCAL_END_UNKNOWN = "fiscal_end_unknown"
 FLAG_PROVISIONAL = "provisional_thresholds"
 FLAG_ASOF_UNKNOWN = "asof_date_unknown"
 FLAG_MIXED_DIRECTION = "mixed_direction"
+FLAG_OPPOSITE_ONLY = "opposite_side_hit_only"
 FLAG_ZERO_VARIANCE = "zero_variance"
 FLAG_DAYS_MISSING = "days_in_period_missing"
 
@@ -76,10 +81,48 @@ class Evaluation:
 
 
 @dataclass(frozen=True)
+class RuleScore:
+    """Điểm một luật: `score` = |giá trị| / |ngưỡng| ở phía của dấu giá trị; `hit` = score >= 1."""
+
+    indicator: str
+    value: Decimal | None
+    score: Decimal | None
+    side: str | None  # "up" nếu giá trị > 0, "down" nếu < 0
+    hit: bool
+
+
+@dataclass(frozen=True)
+class CandidateRow:
+    """Một cặp (công ty, năm tài chính, loại) xét được — kể cả khi chưa vượt ngưỡng."""
+
+    company: str
+    period: str
+    type: str
+    direction: str | None  # dấu biến động của chính công ty; None nếu không đổi
+    exceeded: bool  # có luật CÙNG PHÍA với hướng vượt ngưỡng
+    candidate: bool  # exceeded, không mixed_direction, không chỉ do luật peer
+    mixed_direction: bool
+    deviation: Decimal  # điểm lớn nhất của các luật cùng phía với hướng (thang để xếp hạng)
+    severity: Decimal  # điểm lớn nhất của các luật cùng phía ĐÃ vượt ngưỡng (0 nếu chưa)
+    rules: tuple[RuleScore, ...]
+    rules_hit: tuple[str, ...]
+    rules_hit_opposite: tuple[str, ...]
+    peer_relative: str | None  # above | below | within | None (thuộc tính phụ)
+    peer_value: str | None
+    baseline_used: tuple[str, ...]
+    flags: tuple[str, ...]
+    asof_date: str | None
+    asof_source: str | None
+    indicators: dict[str, str | None]
+
+
+@dataclass(frozen=True)
 class DetectionResult:
     anomalies: tuple[Anomaly, ...]
     evaluations: tuple[Evaluation, ...]
     notes: tuple[str, ...] = field(default=())  # fact bị loại khỏi đầu vào (trùng khóa, sai đơn vị)
+    rows: tuple[CandidateRow, ...] = field(default=())  # mọi cặp xét được, xếp theo mức lệch
+    rule_order: tuple[str, ...] = field(default=())  # thứ tự cột luật trong bảng ứng viên
 
     def summary(self) -> dict[str, dict[str, object]]:
         """Số ca bị gắn cờ trên tổng số kỳ đã xét được, theo loại (spec mục 8.4)."""
@@ -92,6 +135,7 @@ class DetectionResult:
                 "periods_total": len(ev),
                 "periods_evaluated": len(ok),
                 "periods_flagged": len(flagged),
+                "periods_candidate": sum(1 for r in self.rows if r.type == t and r.candidate),
                 "anomaly_rate": None if not ok else str(Decimal(len(flagged)) / len(ok)),
                 "not_evaluable": len(ev) - len(ok),
             }
@@ -187,16 +231,25 @@ class _Panel:
             )
         self.companies = sorted({k[0] for k in self._f})
         self.notes = tuple(sorted(notes))
+        # Kỳ đang xét: số so sánh (từ BCTC năm SAU) của năm >= horizon bị coi là chưa có.
+        self.horizon = cutoff
+        self.asof: dict[tuple[str, int], str] = {}
+
+    def _usable(self, key: tuple[str, int, str]) -> FinancialFact | None:
+        f = self._f.get(key)
+        if f is None or (_is_comparative(f) and key[1] >= self.horizon):
+            return None
+        return f
 
     def fact(self, c: str, y: int, m: str) -> FinancialFact | None:
-        return self._f.get((c, y, m))
+        return self._usable((c, y, m))
 
     def val(self, c: str, y: int, m: str) -> Decimal | None:
-        f = self._f.get((c, y, m))
+        f = self._usable((c, y, m))
         return None if f is None else f.value
 
     def years(self, c: str) -> list[int]:
-        return sorted({k[1] for k in self._f if k[0] == c})
+        return sorted({k[1] for k in self._f if k[0] == c and self._usable(k) is not None})
 
 
 Indicator = Callable[[str, int], "Decimal | None"]  # (công ty, năm) → giá trị
@@ -274,6 +327,10 @@ def _peers(p: _Panel, fn: Indicator, c: str, y: int, end_metric: str, s: Anomaly
         pe = pf.fiscal_period_end if pf is not None else None
         if own_end and pe and pe > own_end:
             flags.add(FLAG_PEER_LATER_END)
+            continue
+        own_asof, peer_asof = p.asof.get((c, y)), p.asof.get((o, y))
+        if own_asof and peer_asof and peer_asof > own_asof:
+            flags.add(FLAG_PEER_LATER_ASOF)  # peer công bố sau as-of của công ty đang xét
             continue
         if not own_end or not pe:
             flags.add(FLAG_FISCAL_END_UNKNOWN)
@@ -406,44 +463,98 @@ def _gross_margin(p: _Panel, c: str, y: int, s: AnomalySettings) -> _Computed:
 # ---------------- engine
 
 
+def _score_rules(ts: TypeSettings, indicators: dict[str, Decimal | None]) -> tuple[RuleScore, ...]:
+    """Điểm từng luật: |giá trị| / |ngưỡng| ở phía của dấu giá trị (>= 1: vượt ngưỡng phía đó)."""
+    out = []
+    for rule in ts.rules:
+        v = indicators.get(rule.indicator)
+        if v is None or v == 0:
+            out.append(RuleScore(rule.indicator, v, None, None, False))
+            continue
+        side = "up" if v > 0 else "down"
+        thr = rule.up if side == "up" else rule.down
+        if thr is None:
+            out.append(RuleScore(rule.indicator, v, None, side, False))
+            continue
+        score = abs(v) / abs(thr)
+        out.append(RuleScore(rule.indicator, v, score, side, score >= 1))
+    return tuple(out)
+
+
+def _peer_position(
+    ts: TypeSettings, scores: tuple[RuleScore, ...]
+) -> tuple[str | None, str | None]:
+    """(vị trí so với nhóm ngành, giá trị chỉ báo peer). Chỉ là thuộc tính phụ."""
+    for r in scores:
+        if is_peer_indicator(r.indicator):
+            if r.value is None:
+                return None, None
+            if r.score is not None and r.score >= 1:
+                return ("above" if r.side == "up" else "below"), _fmt(r.value)
+            return "within", _fmt(r.value)
+    return None, None
+
+
 def detect_anomalies(
     facts: Iterable[FinancialFact],
     settings: AnomalySettings | None = None,
     years: Iterable[int] | None = None,
+    asof_extracted: Mapping[tuple[str, str], AsofEntry] | None = None,
 ) -> DetectionResult:
-    """Phát hiện bất thường cho mọi (công ty, năm trong giai đoạn gốc).
+    """Chấm điểm mọi (công ty, năm tài chính trong cửa sổ chọn ca, loại) và phát hiện bất thường.
 
     Công ty = công ty trong `dataset.companies` hợp với công ty có trong `facts`. Kỳ không có dữ
-    liệu vẫn được liệt kê (không xét được, `no_data`) để mẫu số của tỷ lệ bất thường đầy đủ.
+    liệu vẫn được liệt kê (không xét được) để mẫu số của tỷ lệ bất thường đầy đủ. Mọi kỳ xét được
+    đều có một `CandidateRow` (kể cả chưa vượt ngưỡng) để nhóm chọn ngưỡng và chọn ca.
 
     `facts`: fact chính của Phase 3 (nên là đầu ra `validate_facts` để mang cờ validation).
-    `years`: ghi đè giai đoạn xét (mặc định `base_period` trong dataset.yaml); năm >= mốc tham chiếu
-    vẫn không bao giờ được dùng.
+    `years`: ghi đè cửa sổ cho mọi công ty; năm >= mốc tham chiếu vẫn không bao giờ được dùng.
+    `asof_extracted`: (công ty, kỳ) → ngày công bố trích tự động (vd. ngày ký báo cáo kiểm toán);
+    khai tay trong config (`manual`) được ưu tiên hơn.
     """
     s = load_anomaly_settings() if settings is None else settings
     panel = _Panel(facts, s.reference_only_from_year)
-    wanted = range(s.target_years[0], s.target_years[1] + 1) if years is None else years
-    targets = sorted({y for y in wanted if y < s.reference_only_from_year})
+    asof_auto = dict(asof_extracted or {})
+    for o in set(panel.companies) | set(s.companies):
+        for yy in range(1990, s.reference_only_from_year):
+            a = s.asof_dates.get(o, {}).get(f"FY{yy}") or asof_auto.get((o, f"FY{yy}"))
+            if a is not None and a.date:
+                panel.asof[(o, yy)] = a.date
     anomalies: list[Anomaly] = []
     evals: list[Evaluation] = []
+    rows: list[CandidateRow] = []
 
     for c in sorted(set(panel.companies) | set(s.companies)):
-        for y in targets:
+        if years is None:
+            first = max(s.target_years[0], s.company_start_year.get(c, s.target_years[0]))
+            wanted: Iterable[int] = range(first, s.target_years[1] + 1)
+        else:
+            wanted = years
+        for y in sorted({y for y in wanted if y < s.reference_only_from_year}):
+            panel.horizon = y
             has_data = y in panel.years(c)
+            asof = s.asof_dates.get(c, {}).get(f"FY{y}") or asof_auto.get((c, f"FY{y}"))
             for ts in s.types:
                 if not has_data:
                     evals.append(Evaluation(c, f"FY{y}", ts.name, False, REASON_NO_DATA, False))
                     continue
                 compute = _inventory if ts.name == INVENTORY else _gross_margin
-                computed = compute(panel, c, y, s)
-                found = _anomalies_for(panel, s, ts, c, y, computed)
-                evaluable = computed.indicators.get(ts.requires) is not None
+                comp = compute(panel, c, y, s)
+                evaluable = comp.indicators.get(ts.requires) is not None
                 reason = "" if evaluable else f"missing:{ts.requires}"
-                evals.append(Evaluation(c, f"FY{y}", ts.name, evaluable, reason, bool(found)))
-                anomalies += found
+                row = _row_for(panel, s, ts, c, y, comp, asof) if evaluable else None
+                evals.append(
+                    Evaluation(c, f"FY{y}", ts.name, evaluable, reason, bool(row and row.exceeded))
+                )
+                if row is not None:
+                    rows.append(row)
+                    if row.exceeded:
+                        anomalies.append(_to_anomaly(row))
     anomalies.sort(key=lambda a: a.anomaly_id)
     evals.sort(key=lambda e: (e.company, e.period, e.type))
-    return DetectionResult(tuple(anomalies), tuple(evals), panel.notes)
+    rows.sort(key=lambda r: (-r.deviation, r.company, r.period, r.type))
+    order = tuple(dict.fromkeys(rule.indicator for ts in s.types for rule in ts.rules))
+    return DetectionResult(tuple(anomalies), tuple(evals), panel.notes, tuple(rows), order)
 
 
 def _quality_flags(
@@ -461,111 +572,174 @@ def _quality_flags(
     return out
 
 
-def _anomalies_for(
-    panel: _Panel, s: AnomalySettings, ts: TypeSettings, c: str, y: int, comp: _Computed
-) -> list[Anomaly]:
-    if comp.indicators.get(ts.requires) is None:
-        return []
-    hits: dict[str, list[dict[str, str]]] = {"up": [], "down": []}
-    ratios: dict[str, list[Decimal]] = {"up": [], "down": []}
-    for rule in ts.rules:
-        v = comp.indicators.get(rule.indicator)
-        if v is None:
-            continue
-        for direction, thr, hit in (
-            ("up", rule.up, rule.up is not None and v >= rule.up),
-            ("down", rule.down, rule.down is not None and v <= rule.down),
-        ):
-            if hit and thr is not None:
-                hits[direction].append(
-                    {
-                        "indicator": rule.indicator,
-                        "direction": direction,
-                        "value": _fmt(v) or "",
-                        "threshold": format(thr, "f"),
-                    }
-                )
-                ratios[direction].append(abs(v) / abs(thr))
+def _row_for(
+    panel: _Panel,
+    s: AnomalySettings,
+    ts: TypeSettings,
+    c: str,
+    y: int,
+    comp: _Computed,
+    asof: AsofEntry | None,
+) -> CandidateRow:
+    """Hướng = dấu biến động của chính công ty (chỉ báo `requires`); luật chỉ tính khi cùng phía.
 
+    Luật vượt ngưỡng ở phía NGƯỢC hướng không quyết định gì: chúng được liệt kê và, nếu đồng thời có
+    luật vượt cùng phía, ca bị gắn `mixed_direction` và không tự coi là ứng viên.
+    """
+    own = comp.indicators[ts.requires]
+    assert own is not None
+    direction = "up" if own > 0 else "down" if own < 0 else None
+    scores = _score_rules(ts, comp.indicators)
+    same = tuple(r for r in scores if r.hit and r.side == direction)
+    opposite = tuple(r for r in scores if r.hit and r.side != direction)
+    exceeded = direction is not None and bool(same)
+    mixed = exceeded and bool(opposite)
+    peer_only = exceeded and all("peer" in r.indicator for r in same)
+
+    flags = set(comp.flags)
     inputs = _INVENTORY_INPUTS if ts.name == INVENTORY else _GM_INPUTS
-    input_flags = _quality_flags(panel, s, c, (y, y - 1), inputs, "input")
-    earlier = [yy for yy in panel.years(c) if yy < y - 1]
-    input_flags |= _quality_flags(panel, s, c, earlier, inputs, "input_history")
+    flags |= _quality_flags(panel, s, c, (y, y - 1), inputs, "input")
+    flags |= _quality_flags(
+        panel, s, c, [yy for yy in panel.years(c) if yy < y - 1], inputs, "input_history"
+    )
     for o in comp.peers_used:
-        input_flags |= _quality_flags(panel, s, o, (y, y - 1), inputs, "input_peer")
+        flags |= _quality_flags(panel, s, o, (y, y - 1), inputs, "input_peer")
+    if s.provisional_thresholds:
+        flags.add(FLAG_PROVISIONAL)
+    if asof is None:
+        flags.add(FLAG_ASOF_UNKNOWN)
+    if peer_only:
+        flags.add(FLAG_PEER_ONLY_HIT)
+    if mixed:
+        flags.add(FLAG_MIXED_DIRECTION)
+    elif opposite and not same:
+        flags.add(FLAG_OPPOSITE_ONLY)
 
-    both = bool(hits["up"]) and bool(hits["down"])
-    asof = s.asof_dates.get(c, {}).get(f"FY{y}")
-    out = []
-    for direction in ("up", "down"):
-        if not hits[direction]:
-            continue
-        flags = set(comp.flags) | input_flags
-        if s.provisional_thresholds:
-            flags.add(FLAG_PROVISIONAL)
-        if asof is None:
-            flags.add(FLAG_ASOF_UNKNOWN)
-        if both:
-            flags.add(FLAG_MIXED_DIRECTION)
-        out.append(
-            Anomaly(
-                company=c,
-                period=f"FY{y}",
-                type=ts.name,
-                direction=direction,
-                indicators={k: _fmt(v) for k, v in sorted(comp.indicators.items())},
-                thresholds_hit=tuple(hits[direction]),
-                baseline_used=tuple(dict.fromkeys(comp.baseline)),
-                severity=max(ratios[direction]),
-                flags=tuple(sorted(flags)),
-                asof_date=asof,
-            )
-        )
-    return out
+    same_scores = [r.score for r in same if r.score is not None]
+    all_same_side = [r.score for r in scores if r.side == direction and r.score is not None]
+    deviation = max(all_same_side, default=Decimal(0)) if direction is not None else Decimal(0)
+    position, peer_value = _peer_position(ts, scores)
+    return CandidateRow(
+        company=c,
+        period=f"FY{y}",
+        type=ts.name,
+        direction=direction,
+        exceeded=exceeded,
+        candidate=exceeded and not mixed and not peer_only,
+        mixed_direction=mixed,
+        deviation=deviation,
+        severity=max(same_scores, default=Decimal(0)),
+        rules=scores,
+        rules_hit=tuple(r.indicator for r in same),
+        rules_hit_opposite=tuple(r.indicator for r in opposite),
+        peer_relative=position,
+        peer_value=peer_value,
+        baseline_used=tuple(dict.fromkeys(comp.baseline)),
+        flags=tuple(sorted(flags)),
+        asof_date=None if asof is None else asof.date,
+        asof_source=None if asof is None else asof.source,
+        indicators={k: _fmt(v) for k, v in sorted(comp.indicators.items())},
+    )
 
 
-# ---------------- danh sách ứng viên cho người chọn ca
+def _to_anomaly(row: CandidateRow) -> Anomaly:
+    assert row.direction is not None
+    thresholds = {r.indicator: r for r in row.rules}
+    hits = tuple(
+        {
+            "indicator": name,
+            "direction": row.direction,
+            "value": _fmt(thresholds[name].value) or "",
+            "score": _fmt(thresholds[name].score) or "",
+        }
+        for name in row.rules_hit
+    )
+    return Anomaly(
+        company=row.company,
+        period=row.period,
+        type=row.type,
+        direction=row.direction,
+        indicators=dict(row.indicators),
+        thresholds_hit=hits,
+        baseline_used=row.baseline_used,
+        severity=row.severity,
+        flags=row.flags,
+        asof_date=row.asof_date,
+        peer_relative=row.peer_relative,
+        asof_source=row.asof_source,
+    )
 
-CANDIDATE_COLUMNS = (
-    "anomaly_id",
+
+# ---------------- bảng toàn bộ cặp (công ty, năm, loại) cho người chọn ngưỡng và chọn ca
+
+BASE_COLUMNS = (
+    "rank",
     "company",
     "period",
     "type",
     "direction",
-    "severity",
+    "exceeded_threshold",
+    "candidate",
+    "mixed_direction",
+    "deviation",
     "rules_hit",
-    "key_indicators",
+    "rules_hit_opposite",
+    "peer_relative",
+    "peer_value",
     "baseline_used",
     "flags",
     "asof_date",
+    "asof_source",
 )
 
 
+def candidate_columns(result: DetectionResult) -> list[str]:
+    cols = list(BASE_COLUMNS)
+    for name in result.rule_order:
+        cols += [name, f"{name}__score"]
+    return cols
+
+
 def candidate_rows(result: DetectionResult) -> list[dict[str, str]]:
-    """Danh sách bất thường ứng viên, sắp theo mức độ giảm dần, để NGƯỜI chọn ca đánh giá."""
-    rows = []
-    for a in sorted(result.anomalies, key=lambda a: (-a.severity, a.anomaly_id)):
-        keys = [h["indicator"] for h in a.thresholds_hit]
-        rows.append(
-            {
-                "anomaly_id": a.anomaly_id,
-                "company": a.company,
-                "period": a.period,
-                "type": a.type,
-                "direction": a.direction,
-                "severity": format(a.severity.quantize(Decimal("0.01")), "f"),
-                "rules_hit": ";".join(keys),
-                "key_indicators": ";".join(f"{k}={a.indicators.get(k)}" for k in keys),
-                "baseline_used": ";".join(a.baseline_used),
-                "flags": ";".join(a.flags),
-                "asof_date": a.asof_date or "",
-            }
-        )
-    return rows
+    """MỌI cặp xét được, xếp theo mức lệch (deviation) giảm dần.
+
+    `deviation`: điểm lớn nhất trong các luật cùng phía với hướng (1,0 = đúng ngưỡng). Mỗi luật có
+    cột giá trị và cột `__score` (giá trị / ngưỡng cùng phía). `exceeded_threshold` = có luật cùng
+    phía vượt ngưỡng; `candidate` = vượt ngưỡng và không `mixed_direction`.
+    """
+    out = []
+    for rank, r in enumerate(result.rows, start=1):
+        row = {
+            "rank": str(rank),
+            "company": r.company,
+            "period": r.period,
+            "type": r.type,
+            "direction": r.direction or "",
+            "exceeded_threshold": str(r.exceeded).lower(),
+            "candidate": str(r.candidate).lower(),
+            "mixed_direction": str(r.mixed_direction).lower(),
+            "deviation": _fmt(r.deviation) or "",
+            "rules_hit": ";".join(r.rules_hit),
+            "rules_hit_opposite": ";".join(r.rules_hit_opposite),
+            "peer_relative": r.peer_relative or "",
+            "peer_value": r.peer_value or "",
+            "baseline_used": ";".join(r.baseline_used),
+            "flags": ";".join(r.flags),
+            "asof_date": r.asof_date or "",
+            "asof_source": r.asof_source or "",
+        }
+        for name in result.rule_order:
+            row[name] = ""
+            row[f"{name}__score"] = ""
+        for rule in r.rules:
+            row[rule.indicator] = _fmt(rule.value) or ""
+            row[f"{rule.indicator}__score"] = _fmt(rule.score) or ""
+        out.append(row)
+    return out
 
 
 def write_candidates_csv(result: DetectionResult, path: str | Path) -> None:
     with Path(path).open("w", encoding="utf-8-sig", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=CANDIDATE_COLUMNS)
+        w = csv.DictWriter(fh, fieldnames=candidate_columns(result))
         w.writeheader()
         w.writerows(candidate_rows(result))

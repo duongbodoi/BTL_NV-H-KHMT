@@ -20,7 +20,9 @@
 > - Dữ liệu là **BCTC hợp nhất theo năm tài chính**, không phải quý. Một "kỳ" là một năm tài chính, ký hiệu `FY<năm>` kèm `fiscal_period_end` (ngày kết thúc năm tài chính). HSG có năm tài chính kết thúc 30/9, HPG và NKG kết thúc 31/12.
 > - Giai đoạn gốc: các năm tài chính 2021–2023. Dữ liệu từ năm tài chính 2024 trở đi chỉ làm nguồn đáp án tham chiếu (diễn biến kỳ sau), không đưa vào kho RAG và input của bất kỳ cấu hình nào. Mốc năm nằm trong config.
 > - Mốc as-of của mỗi ca là ngày công bố BCTC năm của năm bất thường.
-> - So sánh giữa các công ty (peer) ghép theo năm tài chính `FY`; khi `fiscal_period_end` khác nhau giữa các công ty thì **gắn cờ** (`peer_fiscal_end_differs`), không coi là cùng thời điểm.
+> - So sánh giữa các công ty (peer) ghép theo năm tài chính `FY`; khi `fiscal_period_end` khác nhau giữa các công ty thì **gắn cờ** (`peer_fiscal_end_differs`), không coi là cùng thời điểm. Peer có năm tài chính kết thúc **muộn hơn** công ty đang xét bị loại (số của họ chưa có khi công ty đó khóa sổ).
+> - **Cửa sổ chọn ca: 2016–2023** (NKG từ 2017), khai trong `configs/dataset.yaml` (`case_selection_window`), thay cho "giai đoạn gốc 2021–2023" khi chọn ca, vì dữ liệu năm làm số kỳ giảm 4 lần so với quý. Nền lịch sử vẫn dùng mọi năm trước kỳ đang xét. Năm 2024 trở đi không bao giờ vào bảng ứng viên.
+> - **Mốc as-of tạm** = ngày ký báo cáo kiểm toán độc lập, trích tự động từ từng tài liệu (`asof_source: audit_report_date`), thay cho "ngày công bố BCTC" (mục 7.2) vì bộ OCR không có ngày công bố. Phải thay bằng ngày công bố thật trước khi chạy A/B/C.
 
 ### A.2. Mục 7.1 — Nguồn dữ liệu và thứ tự ưu tiên
 
@@ -47,6 +49,7 @@
 > - Chỉ so **YoY theo năm tài chính**; bỏ QoQ (dữ liệu năm). `configs/anomaly.yaml: compare_order` đã đặt `[yoy]`.
 > - Baseline lịch sử: mỗi công ty có tối đa vài năm trong 2021–2023 (kèm số so sánh của năm trước đó nếu có), nên **hầu hết ca sẽ có cờ `weak_baseline`**; không giả vờ có z-score/MAD khi không đủ kỳ. Dùng luật YoY (ngưỡng hai phía) làm cơ sở.
 > - So với nhóm cùng ngành: chỉ có hai công ty còn lại làm peer; thiếu peer thì `MISSING`. Peer ghép theo năm tài chính, gắn cờ khi `fiscal_period_end` khác nhau.
+> - **Hướng bất thường = dấu biến động của chính công ty** so năm trước (tăng/giảm). Kết quả so nhóm ngành chỉ là thuộc tính phụ (`peer_relative`: above/below/within), không quyết định hướng. Ca có luật vượt ngưỡng ở cả hai phía (`mixed_direction`) vẫn được liệt kê nhưng không tự coi là ứng viên.
 > - Số ngày tồn kho (8.1): "số ngày trong kỳ" lấy từ độ dài năm tài chính (khoảng cách `fiscal_period_end` giữa hai năm), không mặc định 365.
 
 ### A.4. Các mục khác bị ảnh hưởng (nhóm cân nhắc)

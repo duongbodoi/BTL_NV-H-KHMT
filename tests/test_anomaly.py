@@ -21,7 +21,8 @@ from steel_xai.extraction import extract_document
 from steel_xai.normalization import build_context, load_normalization_settings, normalize
 from steel_xai.parsing import parse_file
 
-CFG = load_config("anomaly")
+PINNED = Path(__file__).parent / "fixtures" / "anomaly_config"
+CFG = load_config("anomaly", PINNED)
 DATASET = load_config("dataset")
 
 
@@ -76,7 +77,8 @@ def by_id(result_anomalies):
 def test_repo_config_loads_and_is_marked_provisional():
     s = load_anomaly_settings()
     assert s.provisional_thresholds is True  # ngưỡng là đề xuất, nhóm chưa chốt
-    assert s.target_years == (2021, 2023) and s.reference_only_from_year == 2024
+    assert s.target_years == (2016, 2023) and s.company_start_year == {"NKG": 2017}
+    assert s.reference_only_from_year == 2024
     assert {t.name for t in s.types} == {"inventory_increase", "gross_margin_change"}
     for t in s.types:
         assert all(r.up is not None and r.down is not None for r in t.rules)  # hai phía
@@ -221,14 +223,14 @@ def test_two_sided_threshold_including_boundary(growth, expected):
     assert sorted(a.direction for a in found) == expected
 
 
-def test_threshold_hit_records_rule_value_and_threshold():
+def test_threshold_hit_records_rule_value_and_score():
     a = by_id(anomalies(_inv_only(0.45), years=[2021]))["AAA|FY2021|inventory_increase|up"]
     hit = [h for h in a.thresholds_hit if h["indicator"] == "inv_growth_yoy"][0]
     assert hit == {
         "indicator": "inv_growth_yoy",
         "direction": "up",
         "value": "0.450000",
-        "threshold": "0.3",
+        "score": "1.500000",
     }
     assert a.severity == Decimal("1.5") and "yoy" in a.baseline_used
 
@@ -252,13 +254,18 @@ def test_missing_prior_year_or_nonpositive_base_is_not_evaluable():
     assert inv and not inv[0].evaluable
 
 
-def test_both_directions_hit_gives_two_anomalies_with_mixed_flag():
-    # tồn kho +60% (YoY, up) nhưng thấp hơn xa hai peer tăng +300% (so peer, down)
+def test_direction_is_the_companys_own_movement_and_mixed_case_is_not_a_candidate():
+    # tồn kho +60% (hướng up, vượt luật YoY) nhưng thấp hơn xa hai peer tăng +300% (luật peer: down)
     facts = _inv_only(0.60, "AAA") + _inv_only(3.0, "BBB") + _inv_only(3.0, "CCC")
-    res = by_id(anomalies(facts, years=[2021]))
-    up, down = res["AAA|FY2021|inventory_increase|up"], res["AAA|FY2021|inventory_increase|down"]
-    assert {h["indicator"] for h in down.thresholds_hit} == {"inv_growth_vs_peer"}
-    assert "mixed_direction" in up.flags and "mixed_direction" in down.flags
+    res = detect_anomalies(facts, S, [2021])
+    found = [a for a in res.anomalies if a.company == "AAA" and a.type == "inventory_increase"]
+    assert [a.direction for a in found] == ["up"]  # không sinh bản ghi "down" từ luật peer
+    a = found[0]
+    assert "mixed_direction" in a.flags and a.peer_relative == "below"
+    assert {h["indicator"] for h in a.thresholds_hit} == {"inv_growth_yoy"}
+    row = next(r for r in res.rows if (r.company, r.type) == ("AAA", "inventory_increase"))
+    assert row.exceeded and row.mixed_direction and not row.candidate
+    assert row.rules_hit_opposite == ("inv_growth_vs_peer",)
 
 
 # ---------------- nền lịch sử
@@ -328,10 +335,12 @@ def test_facts_from_the_reference_year_onward_are_never_used():
     assert detect_anomalies(base + extra, S, years=[2024]).evaluations == ()  # không xét năm 2024
 
 
-def test_target_years_default_to_the_base_period():
+def test_target_years_default_to_the_case_selection_window():
     facts = series("AAA", {y: (100 * 2 ** (y - 2018), 1000, 800, "0.2") for y in range(2018, 2024)})
     periods = {e.period for e in detect_anomalies(facts, S).evaluations}
-    assert periods == {"FY2021", "FY2022", "FY2023"}
+    assert periods == {f"FY{y}" for y in range(2016, 2024)}  # 2024 trở đi không bao giờ vào
+    no_data = {e.period for e in detect_anomalies(facts, S).evaluations if e.reason == "no_data"}
+    assert no_data == {"FY2016", "FY2017"}
 
 
 # ---------------- peer
@@ -432,11 +441,11 @@ def test_summary_reports_flagged_over_evaluated_periods():
         2022: (152, 1500, 800, "0.2"),
         2023: (None, 1500, 800, "0.2"),
     }
-    res = detect_anomalies(series("AAA", rows), S)
+    res = detect_anomalies(series("AAA", rows), S, [2021, 2022, 2023])
     inv = res.summary()["inventory_increase"]
     assert inv["periods_total"] == 3 and inv["periods_evaluated"] == 2
     assert inv["periods_flagged"] == 1 and Decimal(inv["anomaly_rate"]) == Decimal("0.5")
-    assert inv["not_evaluable"] == 1
+    assert inv["not_evaluable"] == 1 and inv["periods_candidate"] == 1
 
 
 def test_non_ok_facts_are_ignored_not_zero():
@@ -454,18 +463,27 @@ def test_anomaly_roundtrip_and_validation():
         Anomaly("A", "FY1", "t", "sideways", {}, (), (), Decimal(1))
 
 
-def test_candidates_are_sorted_by_severity_and_exportable(tmp_path):
-    facts = _inv_only(0.45) + _inv_only(2.0, "BBB") + _inv_only(1.0, "CCC")
+def test_candidate_table_lists_every_evaluable_pair_sorted_by_deviation(tmp_path):
+    facts = _inv_only(0.45) + _inv_only(2.0, "BBB") + _inv_only(0.05, "CCC")
     res = detect_anomalies(facts, S, [2021])
     rows = candidate_rows(res)
-    sev = [Decimal(r["severity"]) for r in rows]
-    assert sev == sorted(sev, reverse=True) and rows[0]["company"] == "BBB"
+    inv = [r for r in rows if r["type"] == "inventory_increase"]
+    assert {r["company"] for r in inv} == {"AAA", "BBB", "CCC"}  # cả ca chưa vượt ngưỡng
+    dev = [Decimal(r["deviation"]) for r in rows]
+    assert dev == sorted(dev, reverse=True) and [r["rank"] for r in rows] == [
+        str(i) for i in range(1, len(rows) + 1)
+    ]
+    ccc = next(r for r in inv if r["company"] == "CCC")
+    assert ccc["exceeded_threshold"] == "false" and ccc["candidate"] == "false"
+    assert Decimal(ccc["inv_growth_yoy__score"]) < 1  # có điểm số dù chưa vượt
+    top = next(r for r in rows if r["company"] == "BBB" and r["type"] == "inventory_increase")
+    assert top["exceeded_threshold"] == "true" and "inv_growth_yoy" in top["rules_hit"]
     path = tmp_path / "cand.csv"
     write_candidates_csv(res, path)
     with path.open(encoding="utf-8-sig", newline="") as fh:
         read = list(csv.DictReader(fh))
-    assert [r["anomaly_id"] for r in read] == [r["anomaly_id"] for r in rows]
-    assert "inv_growth_yoy" in read[0]["rules_hit"]
+    assert [r["rank"] for r in read] == [r["rank"] for r in rows]
+    assert {"inv_growth_yoy", "inv_growth_yoy__score", "gm_change_pp__score"} <= set(read[0])
 
 
 def test_empty_input_gives_empty_result():

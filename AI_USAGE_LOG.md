@@ -276,3 +276,9 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+**Cập nhật 2026-10-24 (đóng Phase 5):**
+- Claude nâng ngưỡng `anomaly.yaml` (tỷ lệ gắn cờ ~70% → tồn kho 30%, biên gộp 20%) và ghim ngưỡng test vào `tests/fixtures/anomaly_config/`. Ngưỡng vẫn là đề xuất, nhóm chưa chốt.
+- Review độc lập vòng 2 (subagent) trên phần thêm sau bản đầu: 2 HIGH (số so sánh từ BCTC năm sau; peer công bố sau as-of), 1 MEDIUM (ca chỉ do luật peer), 1 LOW (trích ngày ký, chưa sửa, fail-safe). Đã sửa các lỗi HIGH/MEDIUM kèm 4 test hồi quy.
+- Nhóm không có ngày công bố, chỉ có năm: dùng tạm ngày ký báo cáo kiểm toán trích tự động.
+- Người cần tự xác minh: chốt ngưỡng trên tập dev; duyệt các mục NHÁP ở `DEVIATIONS_FROM_MIDTERM.md`; chọn 18 ca từ `anomaly_candidates.csv` (Claude không chọn ca).

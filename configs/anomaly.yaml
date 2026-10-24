@@ -1,9 +1,11 @@
 # Phát hiện bất thường (spec mục 8): deterministic, không LLM, ngưỡng nằm ở đây.
 #
-# QUAN TRỌNG: mọi con số ngưỡng dưới đây là ĐỀ XUẤT KHỞI ĐIỂM do Claude đặt để engine chạy được,
-# KHÔNG phải quyết định của nhóm. Ngưỡng thuộc mục 21.1 của spec (người chốt, trên tập dev, trước khi
-# chạy test). Chừng nào `provisional_thresholds: true`, mọi bất thường mang cờ `provisional_thresholds`.
-# Khi nhóm chốt, sửa giá trị rồi đặt false.
+# QUAN TRỌNG: ngưỡng dưới đây là ĐỀ XUẤT của Claude (2026-10-24: đã nâng so với bản đầu để tỷ lệ gắn cờ
+# trên 2016–2023 giảm từ ~70% xuống ~25–35%; dữ liệu năm của ngành thép biến động mạnh), KHÔNG phải
+# quyết định của nhóm. Ngưỡng thuộc mục 21.1 của spec (người chốt, trên tập dev, trước khi chạy test).
+# Chừng nào `provisional_thresholds: true`, mọi bất thường mang cờ `provisional_thresholds`.
+# Khi nhóm chốt, sửa giá trị rồi đặt false. Test dùng ngưỡng cố định ở tests/fixtures/anomaly_config/,
+# nên chỉnh file này không làm hỏng test.
 provisional_thresholds: true
 
 # Hai loại bất thường duy nhất (spec mục 3.2); mỗi loại xét HAI CHIỀU (tăng và giảm),
@@ -47,17 +49,17 @@ asof_dates: {}
 inventory_increase:
   requires: inv_growth_yoy
   rules:
-    - {indicator: inv_growth_yoy, up: 0.30, down: -0.30}
-    - {indicator: inv_minus_rev_growth, up: 0.25, down: -0.25}
-    - {indicator: dio_change_days, up: 30, down: -30}
-    - {indicator: inv_growth_vs_peer, up: 0.25, down: -0.25}
-    - {indicator: inv_growth_z, up: 2.0, down: -2.0}
-    - {indicator: inv_growth_mad_z, up: 3.5, down: -3.5}
+    - {indicator: inv_growth_yoy, up: 0.50, down: -0.50}
+    - {indicator: inv_minus_rev_growth, up: 0.50, down: -0.50}
+    - {indicator: dio_change_days, up: 60, down: -60}
+    - {indicator: inv_growth_vs_peer, up: 0.50, down: -0.50}
+    - {indicator: inv_growth_z, up: 2.5, down: -2.5}
+    - {indicator: inv_growth_mad_z, up: 4.0, down: -4.0}
 
 gross_margin_change:
   requires: gm_change_pp
   rules:
-    - {indicator: gm_change_pp, up: 3.0, down: -3.0}
-    - {indicator: gm_change_vs_peer_pp, up: 3.0, down: -3.0}
-    - {indicator: gm_change_z, up: 2.0, down: -2.0}
-    - {indicator: gm_change_mad_z, up: 3.5, down: -3.5}
+    - {indicator: gm_change_pp, up: 7.0, down: -7.0}
+    - {indicator: gm_change_vs_peer_pp, up: 6.0, down: -6.0}
+    - {indicator: gm_change_z, up: 3.0, down: -3.0}
+    - {indicator: gm_change_mad_z, up: 4.5, down: -4.5}

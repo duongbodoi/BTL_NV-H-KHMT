@@ -125,7 +125,10 @@ class Anomaly:
     `thresholds_hit`: các luật bị vượt, mỗi luật {indicator, direction, value, threshold}.
     `baseline_used`: các cơ sở so sánh thực sự dùng: yoy, peer, history_z, history_mad.
     `severity`: lớn nhất của |giá trị| / |ngưỡng| trong các luật bị vượt (>= 1).
-    `asof_date`: ngày công bố BCTC của kỳ bất thường (ISO) nếu nhóm đã khai, ngược lại `None`.
+    `direction`: dấu biến động của CHÍNH công ty so năm trước, không phải kết quả so peer.
+    `peer_relative`: so với nhóm ngành, chỉ là thuộc tính phụ: above | below | within | None.
+    `asof_date`: ngày công bố BCTC của kỳ bất thường (ISO) nếu đã có, ngược lại `None`;
+    `asof_source`: nguồn của ngày đó (manual | audit_report_date).
     """
 
     company: str
@@ -138,6 +141,8 @@ class Anomaly:
     severity: Decimal
     flags: tuple[str, ...] = ()
     asof_date: str | None = None
+    peer_relative: str | None = None
+    asof_source: str | None = None
 
     def __post_init__(self) -> None:
         if self.direction not in ("up", "down"):
@@ -159,6 +164,8 @@ class Anomaly:
             "severity": str(self.severity),
             "flags": list(self.flags),
             "asof_date": self.asof_date,
+            "peer_relative": self.peer_relative,
+            "asof_source": self.asof_source,
         }
 
     @classmethod
@@ -174,4 +181,6 @@ class Anomaly:
             severity=Decimal(d["severity"]),
             flags=tuple(d.get("flags", ())),
             asof_date=d.get("asof_date"),
+            peer_relative=d.get("peer_relative"),
+            asof_source=d.get("asof_source"),
         )

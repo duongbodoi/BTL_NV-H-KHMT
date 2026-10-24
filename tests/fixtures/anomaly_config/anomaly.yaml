@@ -1,0 +1,65 @@
+# Ngưỡng CỐ ĐỊNH cho test (không phải cấu hình của nhóm). Test không được phụ thuộc configs/anomaly.yaml,
+# để nhóm chỉnh ngưỡng thật mà không làm hỏng test.
+# Phát hiện bất thường (spec mục 8): deterministic, không LLM, ngưỡng nằm ở đây.
+#
+# QUAN TRỌNG: mọi con số ngưỡng dưới đây là ĐỀ XUẤT KHỞI ĐIỂM do Claude đặt để engine chạy được,
+# KHÔNG phải quyết định của nhóm. Ngưỡng thuộc mục 21.1 của spec (người chốt, trên tập dev, trước khi
+# chạy test). Chừng nào `provisional_thresholds: true`, mọi bất thường mang cờ `provisional_thresholds`.
+# Khi nhóm chốt, sửa giá trị rồi đặt false.
+provisional_thresholds: true
+
+# Hai loại bất thường duy nhất (spec mục 3.2); mỗi loại xét HAI CHIỀU (tăng và giảm),
+# dù tên `inventory_increase` lấy theo ví dụ ở spec mục 9.1.
+anomaly_types:
+  - inventory_increase
+  - gross_margin_change
+
+two_sided: true       # spec mục 8.3
+compare_order: [yoy]  # dữ liệu là BCTC năm: chỉ so YoY (QoQ không áp dụng); xem DRAFT_SPEC_CHANGES.md
+
+# Nền lịch sử của chính công ty: dựng từ các lần thay đổi YoY của các năm TRƯỚC kỳ đang xét (không
+# bao giờ dùng năm sau). Không đủ số lần → không có z-score, gắn cờ `weak_baseline`, chỉ còn luật YoY.
+history:
+  min_changes_z: 4     # số lần thay đổi YoY tối thiểu để tính z-score
+  min_changes_mad: 6   # ... để tính robust z-score (MAD); đủ cả hai thì dùng MAD
+
+# So với trung vị nhóm cùng ngành cùng năm tài chính (các công ty còn lại).
+peers:
+  min_peers: 2         # ít hơn → chỉ báo so peer là MISSING (cờ `peer_missing`), không bỏ im lặng
+
+# Cờ của fact đầu vào được chuyển thành cờ `input:<tên>` của bất thường (để người xem biết dữ liệu nền
+# đáng ngờ). Mục kết thúc bằng ":" là tiền tố.
+propagate_flags:
+  - restated_later
+  - comparative_only
+  - peer_fiscal_end_differs
+  - fiscal_end_changed
+  - nil_as_zero
+  - "validation_failed:"
+
+# Ngày công bố BCTC (mốc as-of, spec mục 7.2) theo công ty và năm tài chính — NHÓM KHAI, ví dụ:
+#   HPG: {FY2023: "2024-01-30"}
+# Không khai thì bất thường có asof_date = null và cờ `asof_date_unknown`; Phase 7 cần ngày này.
+asof_dates: {}
+
+# Mỗi loại: `requires` là chỉ báo bắt buộc tính được thì kỳ mới được tính là đã xét (mẫu số của tỷ lệ
+# bất thường). `rules`: chỉ báo + ngưỡng hai phía (`up` > 0, `down` < 0); chỉ cần một luật bị vượt.
+# Chỉ báo: *_growth_yoy là tỷ lệ (0.30 = +30%); *_pp là điểm phần trăm; dio_change_days là ngày;
+# *_z / *_mad_z là z-score / robust z-score so với lịch sử của chính công ty.
+inventory_increase:
+  requires: inv_growth_yoy
+  rules:
+    - {indicator: inv_growth_yoy, up: 0.30, down: -0.30}
+    - {indicator: inv_minus_rev_growth, up: 0.25, down: -0.25}
+    - {indicator: dio_change_days, up: 30, down: -30}
+    - {indicator: inv_growth_vs_peer, up: 0.25, down: -0.25}
+    - {indicator: inv_growth_z, up: 2.0, down: -2.0}
+    - {indicator: inv_growth_mad_z, up: 3.5, down: -3.5}
+
+gross_margin_change:
+  requires: gm_change_pp
+  rules:
+    - {indicator: gm_change_pp, up: 3.0, down: -3.0}
+    - {indicator: gm_change_vs_peer_pp, up: 3.0, down: -3.0}
+    - {indicator: gm_change_z, up: 2.0, down: -2.0}
+    - {indicator: gm_change_mad_z, up: 3.5, down: -3.5}

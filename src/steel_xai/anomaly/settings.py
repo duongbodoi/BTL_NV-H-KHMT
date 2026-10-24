@@ -33,6 +33,20 @@ RULE_INDICATORS = {
 }
 
 
+ASOF_SOURCE_MANUAL = "manual"
+
+
+def is_peer_indicator(name: str) -> bool:
+    """Chỉ báo so với nhóm ngành: lưu thành thuộc tính phụ, không quyết định hướng."""
+    return "vs_peer" in name
+
+
+@dataclass(frozen=True)
+class AsofEntry:
+    date: str  # ISO
+    source: str  # manual | audit_report_date | ...
+
+
 @dataclass(frozen=True)
 class Rule:
     indicator: str
@@ -56,9 +70,10 @@ class AnomalySettings:
     min_peers: int
     propagate_flags: frozenset[str]
     propagate_prefixes: tuple[str, ...]
-    asof_dates: dict[str, dict[str, str]]
+    asof_dates: dict[str, dict[str, AsofEntry]]  # khai tay trong config (nguồn `manual`)
     companies: tuple[str, ...]  # công ty trong dataset.yaml (mẫu số của tỷ lệ bất thường)
-    target_years: tuple[int, int]  # [đầu, cuối] của giai đoạn gốc (dataset.yaml)
+    target_years: tuple[int, int]  # cửa sổ chọn ca [đầu, cuối] (dataset.case_selection_window)
+    company_start_year: dict[str, int]  # năm bắt đầu riêng của từng công ty (dữ liệu bắt đầu muộn)
     reference_only_from_year: int  # từ năm này trở đi KHÔNG được dùng (spec mục 3.3, 7.2)
 
 
@@ -152,7 +167,7 @@ def load_anomaly_settings(
     asof_raw = cfg.get("asof_dates") or {}
     if not isinstance(asof_raw, dict):
         raise ConfigError("anomaly.asof_dates phải là mapping")
-    asof: dict[str, dict[str, str]] = {}
+    asof: dict[str, dict[str, AsofEntry]] = {}
     for company, by_period in asof_raw.items():
         if not isinstance(by_period, dict):
             raise ConfigError(f"anomaly.asof_dates.{company} phải là mapping kỳ → ngày")
@@ -163,18 +178,29 @@ def load_anomaly_settings(
             if not _PERIOD_RE.match(str(period)):
                 raise ConfigError(f"asof_dates.{company}: kỳ phải dạng FYyyyy, nhận {period!r}")
             try:
-                asof[str(company)][str(period)] = dt.date.fromisoformat(str(day)).isoformat()
+                iso = dt.date.fromisoformat(str(day)).isoformat()
+                asof[str(company)][str(period)] = AsofEntry(iso, ASOF_SOURCE_MANUAL)
             except ValueError as e:
                 raise ConfigError(f"asof_dates.{company}.{period}: ngày ISO sai: {day!r}") from e
 
-    base = dataset.get("base_period")
-    if not isinstance(base, dict):
-        raise ConfigError("dataset.base_period phải là mapping")
-    start = _int(base.get("start_year"), "dataset.base_period.start_year", 1)
-    end = _int(base.get("end_year"), "dataset.base_period.end_year", start)
+    window = dataset.get("case_selection_window")
+    if not isinstance(window, dict):
+        raise ConfigError("dataset.case_selection_window phải là mapping")
+    start = _int(window.get("start_year"), "case_selection_window.start_year", 1)
+    end = _int(window.get("end_year"), "case_selection_window.end_year", start)
     cutoff = _int(dataset.get("reference_only_from_year"), "dataset.reference_only_from_year", 1)
     if cutoff <= end:
-        raise ConfigError("reference_only_from_year phải lớn hơn base_period.end_year")
+        raise ConfigError("reference_only_from_year phải lớn hơn case_selection_window.end_year")
+    starts_raw = window.get("company_start_year") or {}
+    if not isinstance(starts_raw, dict):
+        raise ConfigError("case_selection_window.company_start_year phải là mapping")
+    starts: dict[str, int] = {}
+    for company, year in starts_raw.items():
+        if companies and company not in companies:
+            raise ConfigError(f"company_start_year: công ty {company!r} không có trong companies")
+        starts[str(company)] = _int(year, f"company_start_year.{company}", start)
+        if starts[str(company)] > end:
+            raise ConfigError(f"company_start_year.{company} lớn hơn end_year")
 
     return AnomalySettings(
         provisional_thresholds=prov,
@@ -187,5 +213,6 @@ def load_anomaly_settings(
         asof_dates=asof,
         companies=tuple(companies),
         target_years=(start, end),
+        company_start_year=starts,
         reference_only_from_year=cutoff,
     )

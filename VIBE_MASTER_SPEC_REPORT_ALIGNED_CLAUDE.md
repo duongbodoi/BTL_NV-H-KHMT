@@ -830,7 +830,7 @@ Trạng thái ban đầu:
 - Phase 2: NOT STARTED
 - Phase 3: NOT STARTED
 - Phase 4: NOT STARTED
-- Phase 5: NOT STARTED
+- Phase 5: COMPLETED (2026-10-24; ngưỡng và as-of còn tạm, xem docs/phase_reports/PHASE_5.md)
 - Phase 6: NOT STARTED
 - Phase 7: NOT STARTED
 - Phase 8: NOT STARTED
