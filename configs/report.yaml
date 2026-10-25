@@ -60,6 +60,7 @@ tool_units:
   percentile_vs_history: ratio
   growth_vs_series: ratio_diff
   metric_level: vnd
+  policy_text_similarity: ratio
 # Đơn vị của fact đầu vào theo metric (không khai = vnd, tức tiền đồng).
 fact_units:
   gross_margin: ratio

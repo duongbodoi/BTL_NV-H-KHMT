@@ -594,3 +594,34 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+## 2026-10-25 — Phase 13 (Demo)
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:** audit (`demo/` trống); viết `demo/{view,text,app}.py`, `scripts/demo.py`, 8 test; cài Streamlit làm phụ thuộc tùy chọn. Demo đọc kết quả đánh giá đã chạy (không gọi API). Kiểm trên kết quả thật C01.
+
+**Lỗi/sai sót bắt được:** giá trị check in số thô (`2.0047…`) và lặp lại ở dòng diễn giải: đã định dạng theo đơn vị của công cụ bằng cùng hàm với báo cáo; tham số Streamlit sắp bị gỡ (`use_container_width`). Review độc lập (subagent): 1 HIGH (phản bác ngoài top-3 bị ẩn), 5 MEDIUM (đơn vị chỉ báo sai so với báo cáo, check lặp, lỗi im lặng khi thiếu dữ liệu, so sánh thiếu C), 8 LOW: đã sửa hết (`PHASE_13.md` mục 5).
+
+**Phần người cần tự xác minh:** mở `streamlit run src/steel_xai/demo/app.py`, đối chiếu một ca với `outputs/eval/dev/results/summary.md` và BCTC gốc; chọn ca đẹp để trình bày.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-
+
+## 2026-10-25 — Sửa lỗi trích xuất phát hiện khi chạy thật (Phase 2–3)
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Bối cảnh:** chạy thật C01 báo "thiếu capex FY2021 của NKG". Người (Nguyễn Tùng Dương) đối chiếu PDF gốc: dòng mã 21 có số (145.066.081.288) VND, trang 12 PDF (số in 9).
+
+**Nguyên nhân (Claude truy):** (1) OCR mất ô "Chỉ tiêu" nên header bảng lưu chuyển tiền tệ lệch một cột, toàn bộ bảng mất nhãn dòng (`no_label_column`); (2) tiêu đề dính chữ ("Mãsố", "Thuyếtminh"); (3) nhãn mất dấu ("các taisản").
+
+**Việc Claude đã làm:** so từ khóa header không phân biệt khoảng trắng; khi bảng không có cột nhãn mà cột "thuyết minh/mã số" toàn tên chỉ tiêu dài thì dùng làm cột nhãn (cờ `label_column_from_content`); so khớp nhãn không phân biệt khoảng trắng; khớp không dấu CHỈ khi mã số trùng mã của metric (cờ `label_matched_without_diacritics`). 5 test mới. Kiểm `anomaly_candidates.csv` trước/sau: tập 11 ứng viên và mọi giá trị chỉ báo giữ nguyên; chỉ C11 mất cờ `input:comparative_only` (số 2021 giờ lấy từ chính BCTC 2021). Capex 2021 trích đúng số người đã xác nhận; INV-2 của C01 lên 1/2 check critical.
+
+**Phần người cần tự xác minh:** kết quả cũ của C01 thuộc phiên bản code cũ, chạy lại `run_eval.py run --split dev --cases C01 --runs 1`; spot-check thêm một số liệu từ bảng lưu chuyển tiền tệ của công ty khác.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+- Đối chiếu capex NKG FY2021 với PDF gốc: khớp (Nguyễn Tùng Dương, 2026-10-25).
+- Truy vấn check `expansion_text` (INV-2) do Nguyễn Tùng Dương chỉnh (2026-10-25): thêm "dự án mở rộng", "mở rộng nhà máy", "dự án nhà máy", "khu liên hợp", "cam kết chi tiêu vốn", "đi vào hoạt động"; bỏ "dự án mở rộng công suất", "chạy thử". Claude chỉ chép vào thư viện và kiểm truy xuất (không gọi API): đoạn trang 31 BCTC NKG 2021 lên đầu kết quả.
+- Truy vấn 4 check văn bản do Nguyễn Tùng Dương chỉnh (2026-10-25): INV-1 `stockpile_text` ("tích trữ" → "tích trữ nguyên liệu"), INV-3 `weak_demand_text` (bỏ "trích lập dự phòng"), INV-6 `policy_change_text` (thêm "áp dụng phi hồi tố", "trình bày lại"; bỏ 3 cụm mô tả chính sách có trong mọi BCTC), INV-7 `in_transit_text` (thêm "hàng mua đang đi đường", bỏ "nhập khẩu").
+- Theo yêu cầu của nhóm, Claude thay check INV-6 `policy_unchanged_text` (văn bản) bằng check `policy_unchanged` do CODE tính: tool mới `policy_text_similarity` (`verification/policy_text.py`) tìm câu mở đầu chính sách hàng tồn kho (không phân biệt dấu, chịu lỗi OCR) năm N và N−1, so cửa sổ 120 từ (difflib), cả hai tài liệu phải công bố trước as-of; không tìm thấy → NOT_EVALUABLE. Đo trên kho 2016–2023: 21/23 cặp năm ≥ 0,95; HSG 2019 = 0,33 và NKG 2017 = 0,54 (doanh nghiệp viết lại đoạn). **Ngưỡng 0,9 là đề xuất tạm của Claude, nhóm chốt.** 5 test mới.

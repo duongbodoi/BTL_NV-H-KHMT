@@ -68,6 +68,9 @@ def _validate_param(kind: str, key: str, value: Any, cid: str, known: frozenset[
     elif kind == "mode":
         if value not in NUMERATOR_MODES:
             return [f"{cid}: {key} phải thuộc {NUMERATOR_MODES}"]
+    elif kind == "text":
+        if not isinstance(value, str) or not value.strip():
+            return [f"{cid}: tham số {key} phải là chuỗi không rỗng"]
     elif kind == "true" and value is not True:
         return [f"{cid}: {key} chỉ có thể là true"]
     return []

@@ -38,6 +38,24 @@ def norm_label(text: str) -> str:
     return t.strip(" :;.")
 
 
+def label_key(text: str) -> str:
+    """Khóa so khớp nhãn với từ điển: `norm_label` rồi bỏ MỌI khoảng trắng. OCR hay dính chữ
+    ("taisản", "Mãsố") hoặc tách chữ; bỏ khoảng trắng để không lọt nhãn vì lỗi đó (phát hiện
+    2026-10-25: capex NKG FY2021 bị trích sót vì "các taisản dài hạn khác"). Dấu, chữ và thứ tự
+    chữ vẫn phải khớp trọn."""
+    return "".join(norm_label(text).split())
+
+
+def loose_label_key(text: str) -> str:
+    """`label_key` bỏ cả dấu tiếng Việt (đ → d). CHỈ dùng khi khớp chính xác thất bại VÀ mã số của
+    dòng trùng mã của metric (tiếng Việt nhiều từ chỉ khác dấu; mã số là điều kiện để không khớp
+    nhầm). Phát hiện 2026-10-25: OCR ghi "các taisản" (mất dấu "tài") ở dòng capex mã 21."""
+    import unicodedata
+
+    t = unicodedata.normalize("NFD", label_key(text).replace("đ", "d"))
+    return "".join(ch for ch in t if not unicodedata.combining(ch))
+
+
 def _kw(text: str) -> str:
     return normalize_space(text).casefold()
 

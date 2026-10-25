@@ -49,6 +49,10 @@ FLAG_ROWSPAN_OVERFLOW = "rowspan_overflow"
 FLAG_BLOCK_FLAGGED = "block_flagged"  # block bảng có cờ từ Phase 1
 FLAG_SUBHEADER_IN_BODY = "subheader_in_body"
 FLAG_COLUMN_NUMBERING = "column_numbering_row"  # dòng "1 | 2 | 3 | 4" sau header
+# Header gọi một cột là mã số/thuyết minh nhưng thân cột toàn tên chỉ tiêu (OCR mất ô
+# "Chỉ tiêu" làm header lệch một cột) và bảng không còn cột nhãn nào: cột đó được dùng làm
+# cột nhãn. Không chặn; giữ cờ để truy vết.
+FLAG_LABEL_FROM_CONTENT = "label_column_from_content"
 # Cờ cấp giá trị.
 FLAG_PERIOD_MISSING = "period_missing"
 FLAG_PERIOD_AMBIGUOUS = "period_ambiguous"
@@ -299,6 +303,8 @@ def extract_table(
         table_flags.add(FLAG_SUBHEADER_IN_BODY)
     if ROLE_LABEL not in roles and len(rest) > len(subheaders):
         table_flags.add(FLAG_NO_LABEL_COLUMN)
+    if any(k is not None and roles[c] == ROLE_LABEL for c, k in enumerate(keyword_roles)):
+        table_flags.add(FLAG_LABEL_FROM_CONTENT)
     label_cols = tuple(c for c, role in enumerate(roles) if role == ROLE_LABEL)
 
     values: list[RawTableValue] = []
@@ -664,8 +670,16 @@ def _keyword_roles(
             s = grid.at(r, c)
             if s is None or s.cell.col_span != 1:
                 continue
-            t = norm_key(s.cell.text).strip(" .:")
-            role = next((k for k, kws in settings.column_roles.items() if t in kws), role)
+            # bỏ khoảng trắng khi so: OCR hay dính chữ ("Mãsố", "Thuyếtminh")
+            t = "".join(norm_key(s.cell.text).strip(" .:").split())
+            role = next(
+                (
+                    k
+                    for k, kws in settings.column_roles.items()
+                    if t in {"".join(w.split()) for w in kws}
+                ),
+                role,
+            )
         roles.append(role)
     return tuple(roles)
 
@@ -706,7 +720,33 @@ def _column_roles(
             roles[c] = ROLE_TEXT
         else:
             roles[c] = ROLE_VALUE
+    if ROLE_LABEL not in roles:
+        for c in range(grid.n_cols):
+            if keyword_roles[c] is not None and _looks_like_labels(grid, body, c):
+                roles[c] = ROLE_LABEL
+                break
     return tuple(r or ROLE_VALUE for r in roles)
+
+
+LABEL_MIN_CHARS = 12  # tên chỉ tiêu dài; số thuyết minh/mã số ngắn ("4", "11(a)", "141")
+
+
+def _looks_like_labels(grid: _Grid, body: Sequence[int], c: int) -> bool:
+    """Thân cột toàn là tên chỉ tiêu: mọi ô có chữ, đa số ô dài và nhiều chữ cái hơn chữ số."""
+    texts = []
+    for r in body:
+        s = grid.at(r, c)
+        if s is not None and (s.row, s.col) == (r, c) and s.cell.text.strip():
+            texts.append(s.cell.text.strip())
+    if len(texts) < 3:
+        return False
+    wordy = [
+        t
+        for t in texts
+        if len(t) >= LABEL_MIN_CHARS
+        and sum(ch.isalpha() for ch in t) > 3 * sum(ch.isdigit() for ch in t)
+    ]
+    return len(wordy) >= 0.8 * len(texts)
 
 
 # ---------------------------------------------------------------------------

@@ -881,3 +881,33 @@ def test_hpg2022_without_inventory_note_has_no_component_facts():
     r = _run_fixture("HPG_financial_statements_2022", "HPG")
     assert _fact(r, "FY2022", "inventory_total", "HPG").status == ValueStatus.OK
     assert not [f for f in r.facts if f.metric in ("raw_materials", "finished_goods")]
+
+
+# ---------------------------------------------------------------------------
+# So khớp nhãn chịu lỗi OCR (phát hiện 2026-10-25: capex NKG FY2021 bị trích sót)
+
+
+def test_label_key_ignores_spaces_but_not_diacritics():
+    from steel_xai.normalization.settings import label_key, loose_label_key
+
+    assert label_key("Tiền chi để mua sắm") == label_key("Tiềnchi để muasắm")
+    assert label_key("tai sản") != label_key("tài sản")  # dấu vẫn phải khớp
+    assert loose_label_key("các taisản") == loose_label_key("các tài sản")
+    assert loose_label_key("Đầu tư") == "dautu"
+
+
+def test_diacritic_loose_match_requires_matching_code():
+    from steel_xai.normalization.mapping import FLAG_LOOSE_LABEL
+
+    label = "Tiền chi để mua sắm, xây dựng TSCĐ và các taisản dài hạn khác"  # OCR mất dấu "tài"
+    rows = (
+        "<table><tr><td>Mã số</td><td>Chỉ tiêu</td><td>2021 VND</td></tr>"
+        f"<tr><td>21</td><td>{label}</td><td>(145.066)</td></tr>"
+        f"<tr><td>99</td><td>{label}</td><td>(1.000)</td></tr>"
+        f"<tr><td></td><td>{label}</td><td>(2.000)</td></tr></table>"
+    )
+    doc = parse_text(f"===== PAGE 1 =====\n{rows}\n", "gd_2021")
+    res = normalize(extract_document(doc, company="GD"))
+    capex = [f for f in res.facts if f.metric == "capex"]
+    assert [f.value for f in capex] == [Decimal("145066")]  # chỉ dòng mã 21; mã sai/không mã: bỏ
+    assert FLAG_LOOSE_LABEL in capex[0].validation_flags

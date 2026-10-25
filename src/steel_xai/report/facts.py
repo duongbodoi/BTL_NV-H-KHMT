@@ -205,6 +205,8 @@ class _Builder:
         return nid
 
     def check_input(self, inp: CheckInput, hypothesis_id: str, check_id: str) -> None:
+        if inp.kind == "document":  # đoạn văn bản đem so (không phải số liệu)
+            return
         key = (inp.kind, inp.name, inp.period, str(inp.value))
         if key in self._input_ids:
             return

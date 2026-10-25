@@ -16,6 +16,10 @@ dependencies = [
 llm = [
     "anthropic>=1.0",
 ]
+# Chỉ cần cho giao diện web của demo (Phase 13); demo CLI không cần.
+demo = [
+    "streamlit>=1.50,<2",
+]
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",

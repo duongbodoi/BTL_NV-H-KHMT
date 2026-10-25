@@ -83,9 +83,10 @@ hypotheses:
         kind: text
         importance: supporting
         polarity: support
+        # truy vấn do nhóm (Nguyễn Tùng Dương) chỉnh 2026-10-25 sau khi đối chiếu BCTC thật
         queries:
         - dự trữ nguyên liệu
-        - tích trữ
+        - tích trữ nguyên liệu
         - giá nguyên liệu thấp
     status: reviewed
     reviewed_by: Nguyễn Tùng Dương
@@ -151,9 +152,16 @@ hypotheses:
         kind: text
         importance: critical
         polarity: support
+        # truy vấn do nhóm (Nguyễn Tùng Dương) chỉnh 2026-10-25 sau khi đối chiếu BCTC thật: bỏ
+        # "dự án mở rộng công suất", "chạy thử" (không xuất hiện trong file nào); KHÔNG dùng
+        # "xây dựng cơ bản dở dang", "đưa vào sử dụng" và từ đơn "dự án"/"nhà máy"/"đầu tư" (quá chung)
         queries:
-        - dự án mở rộng công suất
-        - chạy thử
+        - dự án mở rộng
+        - mở rộng nhà máy
+        - dự án nhà máy
+        - khu liên hợp
+        - cam kết chi tiêu vốn
+        - đi vào hoạt động
         - đưa vào vận hành
       - id: cip_down
         kind: quant
@@ -281,11 +289,11 @@ hypotheses:
         kind: text
         importance: supporting
         polarity: support
+        # truy vấn do nhóm (Nguyễn Tùng Dương) chỉnh 2026-10-25 sau khi đối chiếu BCTC thật
         queries:
         - tiêu thụ chậm
         - nhu cầu yếu
         - sức mua giảm
-        - trích lập dự phòng
     status: reviewed
     reviewed_by: Nguyễn Tùng Dương
 
@@ -413,17 +421,26 @@ hypotheses:
         kind: text
         importance: critical
         polarity: support
+        # nhóm chỉnh 2026-10-25: bỏ "bình quân gia quyền", "phương pháp tính giá hàng tồn kho",
+        # "nhập trước xuất trước" (có trong MỌI BCTC: mô tả chính sách, không phải dấu hiệu thay đổi)
         queries:
         - thay đổi chính sách kế toán
-        - phương pháp tính giá hàng tồn kho
-        - bình quân gia quyền
-        - nhập trước xuất trước
-      - id: policy_unchanged_text
-        kind: text
+        - áp dụng phi hồi tố
+        - trình bày lại
+      # nhóm chỉnh 2026-10-25: thay check văn bản bằng CODE so đoạn chính sách hàng tồn kho năm N
+      # với N-1 (giống nhau = bằng chứng phản bác). Ngưỡng 0.9 là ĐỀ XUẤT tạm của Claude (đo trên
+      # kho 2016-2023: 21/23 cặp năm >= 0.95; HSG 2019 = 0.33, NKG 2017 = 0.54 do viết lại đoạn);
+      # nhóm chốt trước khi đóng băng.
+      - id: policy_unchanged
+        kind: quant
         importance: critical
         polarity: contradict
-        queries:
-        - chính sách hàng tồn kho nhất quán với năm trước
+        tool: policy_text_similarity
+        params:
+          item: hàng tồn kho
+        pass_when:
+          op: '>='
+          value: 0.9
     status: reviewed
     reviewed_by: Nguyễn Tùng Dương
 
@@ -474,9 +491,10 @@ hypotheses:
         kind: text
         importance: supporting
         polarity: support
+        # truy vấn do nhóm (Nguyễn Tùng Dương) chỉnh 2026-10-25 sau khi đối chiếu BCTC thật
         queries:
         - hàng mua đang đi trên đường
-        - nhập khẩu
+        - hàng mua đang đi đường
       - id: goods_in_transit_stable
         kind: quant
         importance: supporting

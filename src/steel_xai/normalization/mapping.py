@@ -19,7 +19,13 @@ from steel_xai.extraction.settings import norm_key
 from steel_xai.extraction.structured import RawStructuredValue
 from steel_xai.extraction.tables import Period, RawTableValue, TableExtraction
 from steel_xai.normalization.context import DocContext
-from steel_xai.normalization.settings import MetricDef, NormalizationSettings, norm_label
+from steel_xai.normalization.settings import (
+    MetricDef,
+    NormalizationSettings,
+    label_key,
+    loose_label_key,
+    norm_label,
+)
 
 SOURCE_STRUCTURED = "structured"
 SOURCE_OCR = "ocr"
@@ -37,6 +43,8 @@ FLAG_FISCAL_END_UNKNOWN = "fiscal_end_unknown"
 R_COMPANY_MISSING = "company_missing"
 R_IS_PERCENT = "is_percent"
 R_CODE_MISMATCH = "code_mismatch"
+# nhãn chỉ khớp khi bỏ dấu (OCR mất dấu) và mã số trùng mã của metric: fact vẫn dùng, giữ cờ
+FLAG_LOOSE_LABEL = "label_matched_without_diacritics"
 R_CODE_MISSING = "code_missing"
 R_COLUMN_MISMATCH = "column_mismatch"
 R_TABLE_CONTEXT = "table_context_mismatch"
@@ -103,12 +111,22 @@ def map_tables(
 ) -> tuple[list[Candidate], list[Rejection]]:
     contexts = contexts or {}
     by_alias = _alias_index(settings, structured=False)
+    by_loose = _alias_index(settings, structured=False, key=loose_label_key)
     candidates: list[Candidate] = []
     rejections: list[Rejection] = []
     for table in tables:
         labels = frozenset(norm_label(v.row_label) for v in table.values)
         for v in table.values:
-            options = by_alias.get(norm_label(v.row_label))
+            options = by_alias.get(label_key(v.row_label))
+            loose = False
+            if options is None and v.row_code:
+                # OCR mất dấu: chỉ nhận khi mã số của dòng là mã của metric
+                options = [
+                    m
+                    for m in by_loose.get(loose_label_key(v.row_label), [])
+                    if v.row_code in m.codes
+                ] or None
+                loose = options is not None
             if options is None:
                 continue
             metric, pick_reason = _pick_metric(options, v.row_code)
@@ -137,7 +155,15 @@ def map_tables(
                     status=status,
                     source=SOURCE_OCR,
                     provenance=v.provenance(),
-                    flags=tuple(sorted(set(v.flags) | set(p_flags) | set(u_flags) | set(flags))),
+                    flags=tuple(
+                        sorted(
+                            set(v.flags)
+                            | set(p_flags)
+                            | set(u_flags)
+                            | set(flags)
+                            | ({FLAG_LOOSE_LABEL} if loose else set())
+                        )
+                    ),
                     ref=v.value_id,
                     fiscal_end=None if end is None else end.isoformat(),
                 )
@@ -153,7 +179,7 @@ def map_structured(
     candidates: list[Candidate] = []
     rejections: list[Rejection] = []
     for v in values:
-        options = by_alias.get(norm_label(v.item))
+        options = by_alias.get(label_key(v.item))
         if options is None:
             continue
         metric = options[0]
@@ -209,12 +235,15 @@ def _with_report_years(
 
 
 def _alias_index(
-    settings: NormalizationSettings, *, structured: bool
+    settings: NormalizationSettings, *, structured: bool, key=label_key
 ) -> dict[str, list[MetricDef]]:
     out: dict[str, list[MetricDef]] = defaultdict(list)
+    to_key = key
     for m in settings.metrics.values():
         for a in m.structured_aliases if structured else m.aliases:
-            out[a].append(m)
+            key = to_key(a)
+            if m not in out[key]:
+                out[key].append(m)
     return dict(out)
 
 

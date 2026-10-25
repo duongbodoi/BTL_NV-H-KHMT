@@ -1,6 +1,6 @@
 # steel_xai — Giải thích bất thường BCTC ngành thép
 
-Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái (2026-10-25): Phase 0–12 đã có code và test (chi tiết từng phase ở `docs/phase_reports/`). Đang làm: gán nhãn bộ ca (Phase 12a), chạy thử đánh giá bằng API thật (Phase 12). Chưa làm: demo (Phase 13), gói nộp (Phase 14).
+Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái (2026-10-25): Phase 0–12 đã có code và test (chi tiết từng phase ở `docs/phase_reports/`). Đang làm: gán nhãn bộ ca (Phase 12a), chạy đánh giá trên dev (Phase 12; đã chạy thật C01 thành công). Demo (Phase 13): xem mục 6 bên dưới. Chưa làm: gói nộp (Phase 14).
 
 ## Hướng dẫn chạy thử (cho thành viên nhóm)
 
@@ -87,7 +87,21 @@ Một báo cáo đầy đủ cho một bất thường (bước 4 có LLM viết
 python scripts/run_report.py --call-api --anomaly "NKG|FY2021|inventory_increase|up"
 ```
 
-### 6. Quy tắc khi chạy
+### 6. Demo (trình bày kết quả, không gọi API)
+
+Demo đọc kết quả đã chạy ở bước 5 (cấu hình C, kèm A/B để so sánh), nên lúc trình bày không cần mạng.
+
+```bash
+python scripts/demo.py --list               # các ca đã có kết quả
+python scripts/demo.py --case C01           # xem trên terminal
+
+python -m pip install -e ".[demo]"          # một lần: cài Streamlit
+streamlit run src/steel_xai/demo/app.py     # mở giao diện web (trình duyệt tự bật)
+```
+
+Trang hiển thị: bất thường và chỉ báo → giả thuyết + trạng thái → bằng chứng, trích dẫn (tài liệu, trang) và phần còn thiếu → giải thích cuối → so sánh A/B. Muốn có thêm ca thì chạy `run_eval.py run` cho ca đó trước.
+
+### 7. Quy tắc khi chạy
 
 - **KHÔNG chạy `--split test`.** Tập test chỉ chạy một lần, sau khi cả nhóm đã gán nhãn xong và đóng băng (`eval_tools.py freeze`). Lệnh sẽ từ chối nếu chưa đóng băng; đừng dùng `--unfreeze-reason` để lách.
 - **Không sửa tay** file trong `outputs/`, `data/processed/`, `configs/eval_freeze.json`.

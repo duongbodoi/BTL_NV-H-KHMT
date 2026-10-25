@@ -418,6 +418,37 @@ _S = frozenset
 _M = "metric"
 
 
+def policy_text_similarity(ctx: CheckContext, p: dict[str, Any]) -> ToolOutput:
+    """Mức giống nhau (0..1) giữa đoạn chính sách kế toán của khoản mục `item` trong thuyết minh năm
+    đang xét và năm trước (code so văn bản, không LLM). Cả hai tài liệu phải công bố trước as-of."""
+    from steel_xai.contracts import CheckInput, Provenance
+    from steel_xai.verification.policy_text import similarity
+
+    if ctx.policy_texts is None:
+        raise NotEvaluable("không có kho văn bản thuyết minh để so chính sách")
+    led = Ledger()
+    found = []
+    for year in (ctx.year, ctx.year - 1):
+        pt = ctx.policy_texts.find(ctx.company, year, p["item"])
+        if pt is None:
+            raise NotEvaluable(
+                f"không tìm thấy đoạn chính sách {p['item']!r} FY{year} của {ctx.company}"
+            )
+        if ctx.asof is not None and (pt.published is None or pt.published > ctx.asof):
+            raise NotEvaluable(f"thuyết minh FY{year} công bố sau mốc as-of hoặc không rõ ngày")
+        led.add(
+            CheckInput(
+                kind="document",
+                name=f"chính sách {p['item']}",
+                period=f"{ctx.company}:FY{year}",
+                value=Decimal(len(pt.text.split())),
+                source=Provenance(pt.doc_id, pt.page, chunk_id=pt.chunk_id, source_text=pt.text),
+            )
+        )
+        found.append(pt)
+    return _one(similarity(found[0].text, found[1].text), led)
+
+
 def _spec(
     fn: ToolFn, types: dict[str, str], required: frozenset[str], optional: frozenset[str] = _S()
 ) -> ToolSpec:
@@ -463,6 +494,7 @@ TOOLS: dict[str, ToolSpec] = {
             _S({"asof_only"}),
         ),
         _spec(growth_vs_series, {"metric": _M, "series": "series"}, _S({"metric", "series"})),
+        _spec(policy_text_similarity, {"item": "text"}, _S({"item"})),
     )
 }
 

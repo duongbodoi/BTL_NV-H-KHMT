@@ -698,3 +698,86 @@ def test_tools_agree_with_phase5_indicators_on_the_same_facts():
     assert float(g) == pytest.approx(float(inv.indicators["inv_growth_yoy"]), abs=1e-6)
     change_pp = value_of("share_shift", {"metric": "gross_margin"}, c) * 100
     assert float(change_pp) == pytest.approx(float(gm.indicators["gm_change_pp"]), abs=1e-6)
+
+
+# ---------------- so đoạn chính sách kế toán năm N với N-1 (thêm 2026-10-25 theo yêu cầu nhóm)
+
+POLICY_2020 = (
+    "2.8 Hàng tồn kho Hàng tồn kho được thể hiện theo giá thấp hơn giữa giá gốc và giá trị thuần "
+    "có thể thực hiện được. Giá gốc được xác định trên cơ sở bình quân gia quyền."
+)
+POLICY_2021_SAME = POLICY_2020.replace("thể hiện", "thể hiện").replace("Công ty", "Tập đoàn")
+POLICY_2021_NEW = (
+    "(f) Hàng tồn kho Hàng tồn kho dược ghi nhận theo giá gốc và giá trị thuần có thể thực hiện, "
+    "áp dụng phương pháp nhập trước xuất trước kể từ năm nay thay cho phương pháp cũ, áp dụng phi "
+    "hồi tố theo hướng dẫn mới của Bộ Tài chính về kế toán hàng tồn kho."
+)
+
+
+def _chunk(year, text, page=14, published=None, section="Chính sách kế toán", kind="text"):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        company="AAA",
+        period_year=year,
+        doc_id=f"AAA_{year}",
+        page=page,
+        chunk_id=f"c{year}{page}",
+        section=section,
+        text=text,
+        kind=kind,
+        doc_published=published or f"{year + 1}-03-01",
+    )
+
+
+def _policy_ctx(chunks, asof=dt.date(2022, 3, 10)):
+    from dataclasses import replace
+
+    from steel_xai.verification.policy_text import PolicyIndex
+
+    return replace(ctx([], year=2021, asof=asof), policy_texts=PolicyIndex(chunks))
+
+
+def test_policy_text_similarity_same_policy_is_high():
+    c = _policy_ctx([_chunk(2020, POLICY_2020), _chunk(2021, POLICY_2021_SAME)])
+    assert value_of("policy_text_similarity", {"item": "hàng tồn kho"}, c) == D("1.0")
+    r = run_check(quant("policy_text_similarity", {"item": "hàng tồn kho"}, ">=", 0.9), c)
+    assert r.status is CheckStatus.PASS
+    assert {i.kind for i in r.inputs} == {"document"}
+    assert {i.period for i in r.inputs} == {"AAA:FY2021", "AAA:FY2020"}
+
+
+def test_policy_text_similarity_rewritten_policy_is_low_and_ocr_accents_tolerated():
+    c = _policy_ctx([_chunk(2020, POLICY_2020), _chunk(2021, POLICY_2021_NEW)])
+    v = value_of("policy_text_similarity", {"item": "hàng tồn kho"}, c)
+    assert v < D("0.6")  # "dược" (OCR mất dấu) vẫn tìm được câu mở đầu
+    r = run_check(quant("policy_text_similarity", {"item": "hàng tồn kho"}, ">=", 0.9), c)
+    assert r.status is CheckStatus.FAIL  # không giống ≠ chứng minh đổi: chỉ là không phản bác
+
+
+def test_policy_text_similarity_not_evaluable_cases():
+    p = {"item": "hàng tồn kho"}
+    not_evaluable("policy_text_similarity", p, ctx([], year=2021), "kho văn bản")
+    only_cur = _policy_ctx([_chunk(2021, POLICY_2021_SAME)])
+    not_evaluable("policy_text_similarity", p, only_cur, "FY2020")
+    # cùng tên mục nhưng là bảng số / không có câu chữ chính sách: không nhận
+    table_like = _policy_ctx(
+        [
+            _chunk(2020, "8 Hàng tồn kho được thế chấp 2.488.159 triệu VND"),
+            _chunk(2021, POLICY_2021_SAME),
+        ]
+    )
+    not_evaluable("policy_text_similarity", p, table_like, "FY2020")
+    # thuyết minh công bố sau mốc as-of: không dùng
+    late = _policy_ctx(
+        [_chunk(2020, POLICY_2020), _chunk(2021, POLICY_2021_SAME, published="2022-04-01")]
+    )
+    not_evaluable("policy_text_similarity", p, late, "as-of")
+
+
+def test_policy_tool_param_validation():
+    bad = quant("policy_text_similarity", {"item": ""}, ">=", 0.9)
+    assert any("chuỗi không rỗng" in e for e in validate_check(bad))
+    assert (
+        validate_check(quant("policy_text_similarity", {"item": "hàng tồn kho"}, ">=", 0.9)) == []
+    )

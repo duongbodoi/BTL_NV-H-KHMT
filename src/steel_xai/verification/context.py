@@ -6,6 +6,7 @@ import datetime as dt
 from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Any
 
 from steel_xai.contracts import Anomaly, CheckInput, FinancialFact
 from steel_xai.verification.data import ExternalStore, FactStore, fy_year
@@ -27,6 +28,9 @@ class CheckContext:
     settings: VerificationSettings
     # (công ty, năm) → ngày công bố, để lọc peer theo as-of. None → check peer NOT_EVALUABLE
     asof_by: Mapping[tuple[str, int], dt.date] | None = None
+    # đoạn chính sách kế toán trong thuyết minh (PolicyIndex). None → check so sánh chính sách
+    # NOT_EVALUABLE
+    policy_texts: Any = None
 
     def fact(self, metric: str, year: int | None = None, company: str | None = None):
         return self.facts.get(company or self.company, year or self.year, metric, self.year)
@@ -82,6 +86,7 @@ def context_from_anomaly(
     external: ExternalStore,
     settings: VerificationSettings,
     asof_by: Mapping[tuple[str, int], dt.date] | None = None,
+    policy_texts: Any = None,
 ) -> CheckContext:
     year = fy_year(anomaly.period)
     if year is None:
@@ -98,4 +103,5 @@ def context_from_anomaly(
         external=external,
         settings=settings,
         asof_by=asof_by,
+        policy_texts=policy_texts,
     )

@@ -956,3 +956,53 @@ def test_dangling_date_in_two_tier_header_is_a_header_not_data():
     assert (v.row_code, v.row_label, v.unit) == ("140", "Hàng tồn kho", "VND")
     assert v.column_header[-2:] == ("Tại ngày 31 tháng 12 năm", "2023 VND")
     assert v.period is not None and v.period.year == 2023
+
+
+# ---------------------------------------------------------------------------
+# OCR dính chữ / header lệch (phát hiện 2026-10-25: bảng lưu chuyển tiền tệ NKG FY2021)
+
+
+def test_glued_header_keywords_still_get_roles():
+    t = _one(
+        _table(
+            _tr("", "Mãsố", "Thuyếtminh", "31/12/2022 VND", "1/1/2022 VND"),
+            _tr("Hàng tồn kho", "140", "10.1", "46.091", "34.504"),
+            _tr("Phải thu", "216", "9.2", "-", "781"),
+        )
+    )
+    assert t.column_roles[:3] == (ROLE_LABEL, "code", "note")
+
+
+def test_shifted_header_uses_note_column_with_item_names_as_labels():
+    """OCR mất ô "Chỉ tiêu": header ghi "Mã số | Thuyết minh | 2021 | 2020" nhưng thân bảng là
+    "mã | tên chỉ tiêu | số | số". Cột "thuyết minh" toàn tên chỉ tiêu dài: dùng làm
+    nhãn, gắn cờ."""
+    t = _one(
+        _table(
+            _tr("Mãsố", "Thuyếtminh", "2021VND", "2020VND"),
+            _tr("01", "Lợi nhuận kế toán trước thuế", "2.562.028", "320.812"),
+            _tr(
+                "21",
+                "Tiền chi để mua sắm, xây dựng TSCĐ và các taisản dài hạn khác",
+                "(145.066)",
+                "(54.273)",
+            ),
+            _tr("30", "Lưu chuyển tiền thuần từ hoạt động đầu tư", "(308.744)", "345.738"),
+        )
+    )
+    assert "label_column_from_content" in t.flags and "no_label_column" not in t.flags
+    v = _by_raw(t, "(145.066)")
+    assert v.row_code == "21" and v.row_label.startswith("Tiền chi để mua sắm")
+
+
+def test_short_note_refs_never_become_labels():
+    """Cột thuyết minh thật (số ngắn "4", "11(a)") không bị biến thành cột nhãn."""
+    t = _one(
+        _table(
+            _tr("Mã số", "Thuyết minh", "2021 VND", "2020 VND"),
+            _tr("110", "4", "751.445", "219.161"),
+            _tr("140", "11(a)", "6.330", "218"),
+            _tr("150", "5", "18.014", "28.517"),
+        )
+    )
+    assert "label_column_from_content" not in t.flags and "no_label_column" in t.flags

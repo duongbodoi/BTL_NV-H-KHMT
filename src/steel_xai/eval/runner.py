@@ -497,11 +497,17 @@ def build_context(rs: RunnerSettings, client: LLMClient | None) -> EvalContext:
     store = FactStore(facts, v_settings.reference_only_from_year)
     external = ExternalStore.load(v_settings)
     evidence = client.settings.evidence if client is not None else load_llm_settings().evidence
+    chunks = build_chunks(ocr, asof=asof).chunks
+    from steel_xai.verification.policy_text import PolicyIndex
+
+    policies = PolicyIndex(chunks)
     return EvalContext(
         anomalies={a.anomaly_id: a for a in anomalies},
         library=tuple(load_library().reviewed),
-        quant_ctx=lambda a: context_from_anomaly(a, store, external, v_settings, asof_by),
-        retriever=BM25Retriever(build_chunks(ocr, asof=asof).chunks),
+        quant_ctx=lambda a: context_from_anomaly(
+            a, store, external, v_settings, asof_by, policy_texts=policies
+        ),
+        retriever=BM25Retriever(chunks),
         client=client,
         rules=load_verdict_rules(),
         report_settings=load_report_settings(),
