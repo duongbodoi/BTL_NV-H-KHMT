@@ -442,7 +442,7 @@ def test_streamlit_empty_test_split_and_reference(out, monkeypatch):
 
 
 def test_html_export_is_self_contained_and_complete(out, tmp_path):
-    from steel_xai.demo.html import markdown_to_html, write_case_files
+    from steel_xai.demo.html_export import markdown_to_html, write_case_files
 
     v = view(out)
     paths = write_case_files(tmp_path / "demo", [(v, "chính", "ghi chú <b>x</b>")], DISCLAIMER)

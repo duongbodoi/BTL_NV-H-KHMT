@@ -17,7 +17,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from steel_xai.demo.html import write_case_files
+from steel_xai.demo.html_export import write_case_files
 from steel_xai.demo.text import render_text
 from steel_xai.demo.view import default_inputs, list_cases, load_showcase, run_hint
 

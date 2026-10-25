@@ -22,7 +22,7 @@ Trình diễn hệ thống cho hội đồng: một ca được hiển thị the
 ### Bổ sung 2026-10-25 (theo câu trả lời của nhóm)
 
 - **Ca trình diễn** (`configs/demo/showcase.yaml`, đặt ngoài `freeze_globs`): C06 (chính), C01 (ví dụ ca sai), C05 (dự phòng); nhóm chọn sau khi chạy thật 4 ca dev. CLI `--list` và app đánh dấu ★, đưa lên đầu.
-- **Bản HTML dự phòng** (`demo/html.py`, `scripts/demo.py --html DIR`): mỗi ca một file tự chứa (CSS + SVG trong file, không JavaScript, không tải từ mạng) + `index.html`; cùng nội dung với trang demo; mọi chữ được escape.
+- **Bản HTML dự phòng** (`demo/html_export.py`, `scripts/demo.py --html DIR`): mỗi ca một file tự chứa (CSS + SVG trong file, không JavaScript, không tải từ mạng) + `index.html`; cùng nội dung với trang demo; mọi chữ được escape.
 - Kết quả chạy thật 4 ca dev (1 lần, chấm tạm bằng nhãn của Nguyễn Tùng Dương): giả thuyết đúng trong top-3 ở C06 (#1) và C05 (#3, đồng hạng); C01, C02 trượt. Khẳng định không nguồn của C ở bản nháp đầu = 0 ở cả 4 ca (A/B: 1–3/ca); số lệch của C = 0 (B: 7/1/0/4).
 
 ## 2. File
