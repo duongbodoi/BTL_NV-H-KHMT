@@ -99,6 +99,16 @@ python -m pip install -e ".[demo]"          # một lần: cài Streamlit
 streamlit run src/steel_xai/demo/app.py     # mở giao diện web (trình duyệt tự bật)
 ```
 
+**Ca trình diễn** (nhóm chọn, `configs/demo/showcase.yaml`): **C06** (chính: biên gộp HSG 2016), **C01** (ví dụ ca sai: tồn kho NKG 2021), **C05** (dự phòng). Demo đưa các ca này lên đầu, đánh dấu ★.
+
+**Bản dự phòng không cần Python/mạng** (phòng khi máy trình bày lỗi Streamlit):
+
+```bash
+python scripts/demo.py --html outputs/demo   # mỗi ca trình diễn một file HTML + index.html
+```
+
+Chép cả thư mục `outputs/demo/` vào USB, mở `index.html` bằng trình duyệt bất kỳ. Thư mục `outputs/` không nằm trong git: xuất lại sau mỗi lần chạy lại các ca.
+
 Trang hiển thị: bất thường và chỉ báo → giả thuyết + trạng thái → bằng chứng, trích dẫn (tài liệu, trang) và phần còn thiếu → giải thích cuối → so sánh A/B. Muốn có thêm ca thì chạy `run_eval.py run` cho ca đó trước.
 
 ### 7. Quy tắc khi chạy

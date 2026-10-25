@@ -22,6 +22,7 @@ from steel_xai.demo.view import (
     DemoInputs,
     default_inputs,
     list_cases,
+    load_showcase,
     report_label,
     run_hint,
     status_counts,
@@ -78,7 +79,15 @@ def main() -> None:
         st.info(f"Chưa có kết quả cấu hình C cho tập {split}. {run_hint(split)}")
         st.warning(inp.disclaimer)
         st.stop()
-    case_id = st.sidebar.selectbox("Ca", list(cases))
+    show_split, showcase = load_showcase()
+    roles = {x.case_id: x for x in showcase} if split == show_split else {}
+    # ca trình diễn lên đầu (theo thứ tự nhóm chọn), rồi các ca còn lại
+    order = [c for c in roles if c in cases] + [c for c in cases if c not in roles]
+    case_id = st.sidebar.selectbox(
+        "Ca",
+        order,
+        format_func=lambda c: f"★ {c} ({roles[c].role})" if c in roles else c,
+    )
     run_id = st.sidebar.selectbox("Lần chạy", cases[case_id])
     top = st.sidebar.slider("Số hạng hiển thị chi tiết", 1, 10, 3)
     show_ref = st.sidebar.checkbox("Hiện đáp án tham chiếu (nếu đã có đáp án cuối)", value=False)
@@ -86,6 +95,8 @@ def main() -> None:
     v = inp.case_view(split, case_id, run_id)
     for w in v.warnings:
         st.error(f"Cảnh báo dữ liệu: {w}")
+    if case_id in roles:
+        st.info(f"Ca trình diễn: {roles[case_id].role}. {roles[case_id].note}")
 
     # 1. Bất thường
     t = TYPE_VI.get(v.anomaly_type, v.anomaly_type)

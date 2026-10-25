@@ -436,3 +436,46 @@ def test_streamlit_empty_test_split_and_reference(out, monkeypatch):
     assert not at.exception
     assert any("đóng băng" in i.value for i in at.info)  # gợi ý đúng cho tập test
     assert [w.value for w in at.warning].count(DISCLAIMER) == 2
+
+
+# ---------------- bản HTML dự phòng + ca trình diễn (nhóm chọn 2026-10-25)
+
+
+def test_html_export_is_self_contained_and_complete(out, tmp_path):
+    from steel_xai.demo.html import markdown_to_html, write_case_files
+
+    v = view(out)
+    paths = write_case_files(tmp_path / "demo", [(v, "chính", "ghi chú <b>x</b>")], DISCLAIMER)
+    assert [p.name for p in paths] == ["index.html", "C01_run1.html"]
+    page = (tmp_path / "demo" / "C01_run1.html").read_text(encoding="utf-8")
+    assert page.count(DISCLAIMER) == 2 and "<script" not in page
+    import re
+
+    assert not re.search(r"(src|href)\s*=\s*.?https?:", page)  # không tải gì từ mạng
+    for part in (
+        "1. Bất thường",
+        "249,3%",
+        "PARTIAL",
+        QUOTE["quote"],
+        "AAA_2021, trang 12",
+        "thiếu capex FY2021",
+        "4. Giải thích cuối",
+        "5. So sánh cấu hình",
+        "<svg",
+        "ghi chú &lt;b&gt;x&lt;/b&gt;",
+    ):
+        assert part in page, part
+    index = (tmp_path / "demo" / "index.html").read_text(encoding="utf-8")
+    assert "C01_run1.html" in index and DISCLAIMER in index
+    md = markdown_to_html("# T\n\n| a | b |\n|---|---|\n| 1 | <x> |\n\n- `c` **d**\n\n> q")
+    assert "<h3>T</h3>" in md and "<td>&lt;x&gt;</td>" in md
+    assert "<code>c</code> <b>d</b>" in md and "<blockquote>q</blockquote>" in md
+
+
+def test_showcase_config(tmp_path):
+    from steel_xai.demo.view import load_showcase
+
+    split, items = load_showcase()
+    assert split == "dev" and [i.case_id for i in items][:2] == ["C06", "C01"]
+    assert items[1].role == "ví dụ ca sai"
+    assert load_showcase(tmp_path / "không_có.yaml") == ("dev", [])

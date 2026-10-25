@@ -428,9 +428,9 @@ hypotheses:
         - áp dụng phi hồi tố
         - trình bày lại
       # nhóm chỉnh 2026-10-25: thay check văn bản bằng CODE so đoạn chính sách hàng tồn kho năm N
-      # với N-1 (giống nhau = bằng chứng phản bác). Ngưỡng 0.9 là ĐỀ XUẤT tạm của Claude (đo trên
-      # kho 2016-2023: 21/23 cặp năm >= 0.95; HSG 2019 = 0.33, NKG 2017 = 0.54 do viết lại đoạn);
-      # nhóm chốt trước khi đóng băng.
+      # với N-1 (giống nhau = bằng chứng phản bác). Ngưỡng 0.9: Claude đề xuất (đo trên kho
+      # 2016-2023: 21/23 cặp năm >= 0.95; HSG 2019 = 0.33, NKG 2017 = 0.54 do viết lại đoạn),
+      # NHÓM CHỐT 2026-10-25 (Nguyễn Tùng Dương).
       - id: policy_unchanged
         kind: quant
         importance: critical

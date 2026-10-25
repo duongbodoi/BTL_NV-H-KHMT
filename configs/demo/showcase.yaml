@@ -1,0 +1,14 @@
+# Ca dùng để TRÌNH DIỄN (Phase 13). Nhóm chọn 2026-10-25 (Nguyễn Tùng Dương) sau khi chạy thật 4 ca dev.
+# Đặt trong configs/demo/ (ngoài freeze_globs "configs/*.yaml"): đổi ca trình diễn không làm lệch freeze.
+# Chỉ dùng ca DEV: tập test giữ kín tới khi đóng băng và chấm.
+split: dev
+cases:
+  - case_id: C06
+    role: chính
+    note: "Biên gộp tăng HSG FY2016: giả thuyết đúng (GM-3) đứng đầu, 8 trích dẫn nguyên văn trong báo cáo; B lệch 4 số ở cùng ca."
+  - case_id: C01
+    role: ví dụ ca sai
+    note: "Tồn kho tăng NKG FY2021: nhãn của nhóm là INV-1 nhưng số liệu phản bác (nguyên vật liệu chỉ ~34% mức tăng tồn kho); minh họa phân tích ca sai (spec 15.5)."
+  - case_id: C05
+    role: dự phòng
+    note: "Tồn kho tăng HSG FY2017: giả thuyết đúng nằm trong top-3 (đồng hạng #3)."

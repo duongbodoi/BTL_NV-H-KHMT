@@ -4,17 +4,23 @@ annotator: "Nguyễn Tùng Dương"
 labels:
   - case_id: C01
     reference_set: [inventory_raw_material_stockpiling, other]
-    statuses: {}
+    statuses: {inventory_raw_material_stockpiling: PARTIAL}
     sources:
       - title: "MBS – Báo cáo NKG"
         date: "2022-02-28"
         url: "https://mbs.com.vn/media/xionyyrt/nkg_28-02-2022.pdf"
-        page: ""
+        page: ""   # tài liệu không in số trang; câu trích nằm ở phần bàn về hàng tồn kho
       - title: "KBSV – Báo cáo lần đầu NKG"
         date: "2022-09-08"   # in dưới tiêu đề trang bìa ("Giá hiện tại (Sep 7)"); 20220809 trong tên file không phải ngày phát hành
         url: "https://www.kbsec.com.vn/pic/Service/KBSV_NKG_Baocaolandau_20220809%20(2).pdf"
-        page: ""
-    note: "INV-1 khớp một phần."
+        page: "8"   # số in trên tài liệu, phần bảng cân đối
+    note: >-
+      INV-1 = PARTIAL: MBS ghi "Lượng hàng tồn kho tích trữ kỳ vọng hỗ trợ biên LN cao trong nửa đầu
+      năm 2022 khi giá thép đang trong xu hướng phục hồi" (có tích trữ), nhưng lý do là kỳ vọng giá
+      tăng, không phải "khi giá đầu vào thấp" như INV-1. OTHER: tích trữ hàng để vẫn đảm bảo nguồn
+      cung cho thị trường xuất khẩu khi chuỗi cung ứng bị đứt gãy năm 2021 (không phải vì giá đầu vào
+      thấp); KBSV tr. 8: "Do việc đứt gãy chuỗi cung ứng nhưng vẫn phải đảm bảo hàng cung ứng cho
+      thị trường xuất khẩu".
 
   - case_id: C02
     reference_set: [inventory_price_not_volume, other]
@@ -56,3 +62,133 @@ labels:
       GM-3 (chính, nguồn Báo Đầu tư ra sau kỳ): HSG mua HRC khi giá chạm đáy năm 2015 rồi giá tăng; "Chiến lược này giúp
       biên lãi gộp của Công ty liên tục cải thiện và đạt đỉnh 26% trong quý III năm 2016" (quý cuối FY2016).
       GM-2 (phụ, nguồn MBS trong kỳ): giá HRC nhập khẩu giảm ở các quý đầu niên độ. Ngày nguồn MBS lấy theo tên file.
+
+  - case_id: C03
+    reference_set: [margin_input_cost_lag, margin_inventory_cost_effect, margin_selling_price, margin_capacity_utilization]
+    statuses:
+      margin_input_cost_lag: SUPPORTED
+      margin_inventory_cost_effect: SUPPORTED
+      margin_selling_price: SUPPORTED
+      margin_capacity_utilization: PARTIAL
+    sources:
+      - title: "KBSV – Báo cáo cập nhật HPG"
+        date: "2023-02-16"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_HPG_Baocaocapnhat_230216.pdf"
+        page: ""
+      - title: "KBSV – Báo cáo cập nhật HPG"
+        date: "2022-11-16"
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_Baocaocapnhat_HPG_20221116%20(2).pdf"
+        page: "2-3, 5, 7"
+      - title: "DSC – Báo cáo cập nhật HPG Q1/2023"
+        date: "2023-05-05"
+        url: "https://extgw.dsc.com.vn/eback/uploads/2023/05/BaoCaoCapNhat_HPG_Q1.2023_DSC.pdf"
+        page: ""
+      - title: "ABS – Cập nhật ĐHĐCĐ 2023 HPG"
+        date: "2023-03-31"
+        url: "https://www.abs.vn/wp-content/uploads/2023/03/Bao-cao-cap-nhat-DHCD-2023-HPG.pdf"
+        page: "1-2"
+    note: >-
+      GM-1 + GM-3 (KBSV 16/11/2022, tr. 2-3): "Biên lợi nhuận bị bào mòn nghiêm trọng do giá bán đầu ra
+      giảm và áp lực tồn nguyên vật liệu giá cao từ Quý trước." GM-2 SUPPORTED, GM-6 PARTIAL theo các
+      nguồn trên.
+
+  - case_id: C04
+    reference_set: [inventory_capacity_expansion, inventory_price_not_volume, inventory_goods_in_transit_timing]
+    statuses:
+      inventory_capacity_expansion: SUPPORTED
+      inventory_price_not_volume: PARTIAL
+      inventory_goods_in_transit_timing: PARTIAL
+    sources:
+      - title: "Báo Đấu thầu – Thép Nam Kim: Rủi ro khi tăng trưởng nóng?"
+        date: "2018-04-11"
+        url: "https://baodauthau.vn/thep-nam-kim-rui-ro-khi-tang-truong-nong-post48809.html"
+        page: ""   # bài báo, không có trang
+      - title: "VietnamFinance – Thép Nam Kim: Tham vọng tăng trưởng và nỗi lo tồn kho, nợ nần"
+        date: "2018-04-07"
+        url: "https://vietnamfinance.vn/thep-nam-kim-tham-vong-tang-truong-va-noi-lo-ton-kho-no-nan-d17431.html"
+        page: ""   # bài báo, không có trang
+    note: >-
+      INV-2 (Báo Đấu thầu): "cần phải gia tăng hàng tồn kho để bảo đảm hoạt động sản xuất từ việc tăng
+      công suất". INV-5 (Báo Đấu thầu): "giá trị hàng tồn kho cũng gia tăng theo do giá nguyên liệu
+      tăng". INV-7 (Báo Đấu thầu): "xuất hiện thêm hàng đang đi trên đường là 729,5 tỷ đồng".
+
+  - case_id: C07
+    reference_set: [other]
+    statuses:
+      inventory_weak_demand: CONTRADICTED
+    sources:
+      - title: "MBS – Báo cáo đầu tư HPG"
+        date: "2022-04-04"
+        url: "https://mbs.com.vn/media/ii2j0obt/báo-cáo-đầu-tư-hpg-full-04-04-22.pdf"
+        page: ""
+    note: >-
+      OTHER (người gán đánh giá được ủng hộ): tồn kho tăng để đáp ứng nhu cầu thị trường tăng, tức là
+      tăng theo quy mô sản xuất và kinh doanh. MBS: "trong giai đoạn này lượng hang tồn kho của HPG
+      tăng khá cao đạt hơn 42 nghìn tỷ đồng (+60% YoY)" và mức tăng này "nhằm đáp ứng sự gia tăng nhu
+      cầu từ thị trường". INV-3 (nhu cầu yếu) bị nguồn phản bác.
+
+  - case_id: C08
+    reference_set: [margin_inventory_cost_effect, margin_selling_price, margin_inventory_provision, margin_input_cost_lag, margin_product_market_mix]
+    statuses:
+      margin_inventory_cost_effect: SUPPORTED
+      margin_selling_price: SUPPORTED
+      margin_inventory_provision: SUPPORTED
+      margin_input_cost_lag: PARTIAL
+      margin_product_market_mix: PARTIAL
+    sources:
+      - title: "Người Quan Sát – “Nối gót” Hòa Phát, Hoa Sen (HSG) báo lỗ khủng quý cuối niên độ 2021–2022"
+        date: "2022-10-29"
+        url: "https://nguoiquansat.vn/noi-got-hoa-phat-hoa-sen-hsg-bao-lo-khung-quy-cuoi-nien-do-2021-2022-68290.html"
+        page: ""   # bài báo, không có trang
+    note: >-
+      GM-3: "lượng hàng tồn kho phục vụ cho hoạt động kinh doanh không thể giảm ngay lập tức". GM-1:
+      "Giá thép giảm liên tục trong khi nhu cầu tiêu thụ chậm". GM-4: "chi phí dự phòng giảm giá hàng
+      tồn kho lại tăng khủng tới 246% lên mức 716 tỷ đồng". GM-2: "giá đầu vào (chủ yếu từ nửa cuối
+      năm ngoái) tăng cao". GM-5: "gây ảnh hưởng đến sản lượng xuất khẩu thép của Việt Nam".
+
+  - case_id: C09
+    reference_set: [inventory_active_destocking]
+    statuses:
+      inventory_active_destocking: SUPPORTED
+    sources:
+      - title: "VnEconomy – Tập đoàn Hoa Sen và chiến lược tái cấu trúc để vươn lên"
+        date: "2018-12-05"
+        url: "https://vneconomy.vn/tap-doan-hoa-sen-va-chien-luoc-tai-cau-truc-de-vuon-len.htm"
+        page: ""   # bài báo, không có trang
+    note: >-
+      DEC-2: "giảm chi phí lãi vay bằng cách giảm hàng tồn kho, định mức tồn kho ở mức tối thiểu".
+
+  - case_id: C10
+    reference_set: [inventory_active_destocking]
+    statuses:
+      inventory_active_destocking: PARTIAL
+    sources:
+      - title: "Tôn Nam Kim (website NKG, dẫn nhận định của HSC) – Thép Nam Kim được gì sau khi tái cơ cấu?"
+        date: "2020"   # trang không ghi ngày; người gán ước lượng nội dung khoảng giữa năm 2020
+        url: "https://tonnamkim.com/thep-nam-kim-duoc-gi-sau-khi-tai-co-cau/"
+        page: ""   # trang web, không có số trang
+        note: "nguồn do chính công ty đăng, dẫn nhận định của HSC"
+    note: >-
+      DEC-2: "HSC cho biết NKG sẽ duy trì chính sách chỉ tồn kho một tháng nguyên liệu đầu vào và một
+      tháng thành phẩm" ... "để giảm thiểu rủi ro biến động giá nguyên liệu đầu vào (HRC)."
+
+  - case_id: C11
+    reference_set: [margin_selling_price, margin_inventory_cost_effect, margin_product_market_mix]
+    statuses:
+      margin_selling_price: SUPPORTED
+      margin_inventory_cost_effect: PARTIAL
+      margin_product_market_mix: PARTIAL
+    sources:
+      - title: "MBS – Báo cáo NKG"
+        date: "2022-02-28"
+        url: "https://mbs.com.vn/media/xionyyrt/nkg_28-02-2022.pdf"
+        page: ""
+      - title: "KBSV – Báo cáo lần đầu NKG"
+        date: "2022-09-08"   # in dưới tiêu đề trang bìa ("Giá hiện tại (Sep 7)")
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_NKG_Baocaolandau_20220809%20(2).pdf"
+        page: ""
+    note: >-
+      GM-1 (MBS): "Biên LN gộp cải thiện mạnh từ 7,5% trong năm 2020 lên 15,2% trong năm 2021 nhờ giá
+      bán bình quân tăng hơn 20%". GM-3 (KBSV): "đã tận dụng tốt quá trình tăng giá của HRC trong nửa
+      cuối năm 2020 và nửa đầu năm 2021"; MBS nêu thêm "chính sách quản lý hàng tồn kho hiệu quả hơn
+      sau tái cơ cấu". GM-5 (KBSV): "xuất khẩu chiếm 68% tương ứng 19,200 tỷ VND".

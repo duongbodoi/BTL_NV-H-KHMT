@@ -203,7 +203,10 @@ def cmd_score(args) -> int:
     models = sorted(
         {f"{r.llm.get('provider')}/{r.llm.get('model')}" for r in records if r.llm.get("model")}
     )
-    header.append(f"LLM: {', '.join(models) or '–'}; {rs.runs_per_case} lần chạy/ca")
+    runs_done = len({r.run_id for r in records if r.status == "ok"})
+    header.append(
+        f"LLM: {', '.join(models) or '–'}; đã chạy {runs_done}/{rs.runs_per_case} lần mỗi ca"
+    )
     header.append(f"`other` tính là trúng: {rs.other_counts_as_hit}")
     lib_s = load_library_settings()
     taxonomy = taxonomy_from_library(load_library().reviewed)

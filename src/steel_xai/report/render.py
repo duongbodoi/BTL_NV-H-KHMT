@@ -142,7 +142,17 @@ def render_report(
         out.append(f"- [{e.id}] {e.hypothesis_id}/{e.check_id}: “{e.quote}”")
         shown.add(e.id)
     if not contra and not contra_e:
-        out.append("- Không ghi nhận bằng chứng phản bác nào.")
+        # chỉ xét các giả thuyết đưa vào báo cáo (top-k): nói đúng phạm vi đó
+        out.append(
+            f"- Không ghi nhận bằng chứng phản bác cho {len(inp.verdicts)} giả thuyết hàng đầu."
+        )
+    contra_others = [v for v in inp.others if v.status == "CONTRADICTED"]
+    if contra_others:  # nhóm chốt 2026-10-25: luôn nêu giả thuyết bị phản bác ngoài top-k
+        names = ", ".join(v.code or v.hypothesis_id for v in contra_others)
+        out.append(
+            f"- Các giả thuyết khác bị phản bác (CONTRADICTED): {names}. Chi tiết trong bảng "
+            "trạng thái."
+        )
     out += [_claim_line(c) for c in by_section["contradictions"]]
 
     # 6

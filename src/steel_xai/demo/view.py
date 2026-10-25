@@ -471,3 +471,28 @@ def default_inputs() -> DemoInputs:
         series_units=dict(rs.series_units),
         references=refs,
     )
+
+
+@dataclass(frozen=True)
+class ShowcaseItem:
+    case_id: str
+    role: str
+    note: str
+
+
+def load_showcase(path: Path | None = None) -> tuple[str, list[ShowcaseItem]]:
+    """(split, ca trình diễn theo thứ tự) đọc từ configs/demo/showcase.yaml."""
+    import yaml
+
+    from steel_xai.config import PROJECT_ROOT
+
+    p = path or PROJECT_ROOT / "configs" / "demo" / "showcase.yaml"
+    if not p.is_file():
+        return "dev", []
+    raw = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    items = [
+        ShowcaseItem(str(c["case_id"]), str(c.get("role", "")), str(c.get("note", "")))
+        for c in raw.get("cases") or []
+        if isinstance(c, dict) and c.get("case_id")
+    ]
+    return str(raw.get("split", "dev")), items

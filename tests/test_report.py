@@ -723,7 +723,22 @@ def test_render_shows_contradictions_and_missing_from_code():
     i = inp()
     md = skeleton_report(i, S)
     assert "thiếu cip FY2022 của AAA" in md
-    assert "Không ghi nhận bằng chứng phản bác nào." in md  # check contradict FAIL = không thấy
+    # check contradict FAIL = không thấy; câu nói rõ phạm vi là các giả thuyết đưa vào báo cáo
+    assert f"Không ghi nhận bằng chứng phản bác cho {len(i.verdicts)} giả thuyết hàng đầu." in md
+    assert "Các giả thuyết khác bị phản bác (CONTRADICTED): GM-5." in md  # GM-5 ngoài top-k
+
+
+def test_render_lists_contradicted_hypotheses_outside_top_k():
+    """Nhóm chốt 2026-10-25: giả thuyết bị phản bác ngoài top-k luôn được nêu tên, để báo cáo
+    không mâu thuẫn với bảng trạng thái/demo."""
+    from dataclasses import replace
+
+    i = inp()
+    other = replace(
+        i.verdicts[0], id="_other9", hypothesis_id="h_x", code="GM-9", status="CONTRADICTED", rank=9
+    )
+    md = skeleton_report(replace(i, others=(*i.others, other)), S)
+    assert "Các giả thuyết khác bị phản bác (CONTRADICTED): GM-5, GM-9." in md
 
 
 def test_rendered_claims_never_bypass_the_checker():
