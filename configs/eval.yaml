@@ -100,7 +100,9 @@ runner:
     seed: 20261025
     level: 0.95
   # Giá token để tính tiền mỗi ca (spec 15.3). null = chưa khai: chỉ báo token, không báo tiền.
+  # Nhóm chốt gemini-3.5-flash-lite FREE TIER (2026-10-25) → tiền thật = 0. Giá gói trả phí của
+  # model này (0,30 / 2,50) và các model khác: configs/cost/pricing.yaml, docs/COST_ESTIMATE.md.
   pricing:
     currency: USD
-    input_per_mtok: null
-    output_per_mtok: null
+    input_per_mtok: 0.0
+    output_per_mtok: 0.0

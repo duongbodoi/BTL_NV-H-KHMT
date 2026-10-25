@@ -1,0 +1,50 @@
+# (Đặt trong configs/cost/ để KHÔNG nằm trong freeze_globs "configs/*.yaml": sửa giá không làm lệch freeze.)
+# Bảng giá LLM để ƯỚC TÍNH chi phí nếu chạy đánh giá bằng model tính phí (scripts/estimate_cost.py).
+# Không ảnh hưởng kết quả chạy. Giá đổi thường xuyên: kiểm lại nguồn trước khi dùng con số.
+# Đơn vị: USD / 1 triệu token. Token suy luận (thinking) tính như token ra ở cả hai nhà cung cấp.
+#
+# Nguồn (tra 2026-10-25):
+# - Anthropic: bảng giá của skill claude-api (cập nhật 2026-10-06); hiện hành tại
+#   https://platform.claude.com/docs/en/about-claude/pricing
+# - Google: https://ai.google.dev/gemini-api/docs/pricing (trang cập nhật 2026-10-22)
+# Batch API của cả hai giảm ~50% (runner hiện gọi tuần tự, KHÔNG dùng batch).
+
+models:
+  # --- model đang dùng (nhóm chốt free tier 2026-10-25) ---
+  gemini-3.5-flash-lite:   {provider: gemini, input: 0.30, output: 2.50, free_tier: true,
+                            note: "model hiện tại; free tier = 0 đồng (giới hạn lời gọi/phút)"}
+  # --- Google trả phí ---
+  gemini-3.1-flash-lite:   {provider: gemini, input: 0.25, output: 1.50, free_tier: true}
+  gemini-3.8-flash:        {provider: gemini, input: 0.75, output: 3.75, free_tier: true,
+                            note: "giá giới thiệu; tăng lên 1,50 / 7,50 từ 2027-01-01"}
+  gemini-3.1-pro-preview:  {provider: gemini, input: 2.00, output: 12.00, free_tier: false,
+                            note: "prompt <= 200K token"}
+  gemini-4-argon:          {provider: gemini, input: 2.00, output: 10.00, free_tier: false,
+                            note: "giá giới thiệu; tăng lên 4,00 / 20,00 từ 2026-12-01"}
+  # --- Anthropic ---
+  claude-haiku-5-5:        {provider: anthropic, input: 0.10, output: 0.50, free_tier: false,
+                            note: "prompt <= 100K token"}
+  claude-sonnet-5-5:       {provider: anthropic, input: 2.00, output: 10.00, free_tier: false}
+  claude-opus-5-5:         {provider: anthropic, input: 4.00, output: 20.00, free_tier: false}
+  claude-fable-5-1:        {provider: anthropic, input: 10.00, output: 50.00, free_tier: false}
+
+# Giả định khi CHƯA có số đo thật (ước tính từ prompt dựng trên dữ liệu thật):
+estimate:
+  # ký tự / token cho văn bản tiếng Việt có dấu + JSON. Tokenizer mỗi hãng khác nhau: báo cả khoảng.
+  chars_per_token: {low: 2.5, mid: 3.0, high: 4.0}
+  # token ra NHÌN THẤY mỗi lời gọi (JSON trả về), theo tác vụ
+  output_tokens:
+    baseline_free: 1500        # A/B: giả thuyết + khẳng định
+    ranking: 300               # A_lib/B_lib/no_verification: xếp hạng id
+    generate: 500              # no_library: sinh giả thuyết + truy vấn
+    rephrase_queries: 300
+    classify_passages: 1200    # nhãn + trích dẫn cho tối đa 8 đoạn
+    grounded_report: 2500
+  # token suy luận ẩn = hệ số × token ra nhìn thấy (model có thinking; tính tiền như token ra)
+  thinking_factor: 1.0
+  # độ bất định của token ra (giả định, chưa đo): mức chi phí thấp/cao nhân token ra với hệ số này
+  output_band: {low: 0.5, high: 2.0}
+  # số lần viết báo cáo trung bình của C (1 bản nháp + sinh lại khi bộ kiểm từ chối; tối đa 3)
+  report_attempts: 2
+  # số lần chạy lại vì lỗi/429 (hệ số nhân tổng)
+  retry_overhead: 1.1

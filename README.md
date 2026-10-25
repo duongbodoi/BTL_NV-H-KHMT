@@ -1,6 +1,110 @@
 # steel_xai — Giải thích bất thường BCTC ngành thép
 
-Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái: Phase 0, 1, 2 đã commit; Phase 3 (chuẩn hóa), Phase 4 (validation) và Phase 5 (anomaly engine, COMPLETED) chờ nhóm spot-check/commit; Phase 6 (khung thư viện giả thuyết) xong phần công cụ, chờ nhóm soạn nội dung (`hypotheses/`); Phase 7 (RAG BM25, lọc as-of) và Phase 8 (kiểm chứng định lượng) và Phase 9 (LLM: phân loại bằng chứng, kiểm trích dẫn) và Phase 10 (trạng thái + xếp hạng giả thuyết) và Phase 11 (báo cáo grounded: `scripts/run_report.py`, mặc định không gọi API) xong code, chờ nhóm xác nhận/dữ liệu giá/chạy thử API thật.
+Spec chính thức: `VIBE_MASTER_SPEC_REPORT_ALIGNED_CLAUDE.md`. Trạng thái (2026-10-25): Phase 0–12 đã có code và test (chi tiết từng phase ở `docs/phase_reports/`). Đang làm: gán nhãn bộ ca (Phase 12a), chạy thử đánh giá bằng API thật (Phase 12). Chưa làm: demo (Phase 13), gói nộp (Phase 14).
+
+## Hướng dẫn chạy thử (cho thành viên nhóm)
+
+LLM dùng **Gemini `gemini-3.5-flash-lite` free tier** (nhóm chốt 2026-10-25): không tốn tiền, nhưng có giới hạn số lời gọi/phút.
+
+### 1. Cài đặt (một lần)
+
+Cần Python ≥ 3.11 và git.
+
+```bash
+git clone <địa chỉ repo> && cd mvp
+python -m venv .venv
+# Windows (PowerShell): .venv\Scripts\Activate.ps1   |   Linux/macOS: source .venv/bin/activate
+python -m pip install -e ".[dev]"
+python -m pytest -q          # phải thấy "... passed", không có failed
+```
+
+### 2. Dữ liệu (một lần)
+
+- **OCR BCTC không nằm trong git** (dữ liệu lớn/bản quyền). Lấy thư mục `vifinqa` từ nhóm (Nguyễn Tùng Dương) và đặt đúng chỗ: `data/raw/vifinqa/<mã>/<năm>/<tên tài liệu>/..._extracted.txt`.
+- Giá quặng/thép (`data/external/`), danh sách ca và nhãn (`data/eval/`) đã có trong git.
+- Dựng các file trung gian (không gọi API, mất vài phút):
+
+```bash
+python scripts/build_anomaly_candidates.py   # → data/processed/anomaly_candidates.csv, asof_dates.csv
+python scripts/build_rag_index.py            # → data/processed/rag_chunks.jsonl
+python scripts/eval_tools.py candidates      # kiểm tra: phải thấy 11 dòng có dấu *
+```
+
+### 3. API key Gemini (một lần)
+
+Mỗi người tự tạo key miễn phí tại Google AI Studio (https://aistudio.google.com/apikey). **Không gửi key qua chat, không commit key.** Code chỉ đọc biến môi trường `GEMINI_API_KEY` (không tự đọc file `.env`). Thay `<KEY>` bằng key của bạn:
+
+```powershell
+# Windows PowerShell: đặt cho phiên hiện tại
+$env:GEMINI_API_KEY = "<KEY>"
+# hoặc lưu lâu dài (mở terminal mới sau lệnh này)
+setx GEMINI_API_KEY "<KEY>"
+```
+
+```bash
+# Linux/macOS
+export GEMINI_API_KEY="<KEY>"
+```
+
+### 4. Chạy thử không gọi API (kiểm tra cài đặt)
+
+```bash
+python scripts/run_eval.py estimate --split dev   # đếm số lời gọi LLM tối đa cho 4 ca dev
+python scripts/run_report.py --anomaly "NKG|FY2021|inventory_increase|up"   # báo cáo khung (chưa có LLM)
+```
+
+Báo cáo ra ở `data/processed/reports/`.
+
+### 5. Chạy thử với API thật (free tier)
+
+**Bắt đầu nhỏ: một ca, một lần chạy** (khoảng 40 lời gọi LLM, vài phút):
+
+```bash
+python scripts/run_eval.py run --split dev --cases C01 --runs 1
+```
+
+- Mỗi dòng in ra là một cấu hình (A, B, C, A_lib, B_lib, no_rag, no_verification, no_library) với `ok` hoặc `error (lý do)`.
+- Gặp lỗi 429/503 (hết hạn mức free tier): đợi vài phút rồi **chạy lại đúng lệnh đó**. Lần chạy đã `ok` được giữ nguyên, chỉ lần lỗi được chạy lại.
+- Kết quả: `outputs/eval/dev/runs/<cấu hình>/<ca>/<lần>.json`. Thư mục `outputs/` và cache LLM (`cache/`) nằm máy ai người nấy, không commit.
+
+Chấm tạm (chỉ trên dev, khi người gán thứ hai chưa xong):
+
+```bash
+python scripts/run_eval.py score --split dev --provisional "Nguyễn Tùng Dương"
+```
+
+Xem `outputs/eval/dev/results/summary.md` (bảng metric), `case_C01.md` (ca minh họa), `hit_chart.svg`. Ở giai đoạn này A/B hiện "–" ở Hit@k vì còn chờ ánh xạ mù: đó là bình thường.
+
+Chạy đủ tập dev (4 ca × 8 cấu hình × 3 lần, tối đa ~440 lời gọi; free tier có thể phải chạy nhiều đợt):
+
+```bash
+python scripts/run_eval.py run --split dev
+```
+
+Một báo cáo đầy đủ cho một bất thường (bước 4 có LLM viết):
+
+```bash
+python scripts/run_report.py --call-api --anomaly "NKG|FY2021|inventory_increase|up"
+```
+
+### 6. Quy tắc khi chạy
+
+- **KHÔNG chạy `--split test`.** Tập test chỉ chạy một lần, sau khi cả nhóm đã gán nhãn xong và đóng băng (`eval_tools.py freeze`). Lệnh sẽ từ chối nếu chưa đóng băng; đừng dùng `--unfreeze-reason` để lách.
+- **Không sửa tay** file trong `outputs/`, `data/processed/`, `configs/eval_freeze.json`.
+- Sửa code/config/prompt thì kết quả cũ bị coi là phiên bản khác và được chạy lại ở lần `run` sau (tốn thêm lời gọi).
+- Gặp lỗi lạ: gửi nhóm dòng `error (...)` và file JSON của lần chạy đó, **không gửi kèm API key**.
+- Người gán nhãn thứ hai (Hoàng Minh Đức): gán **trong phiên riêng, không mở** `data/eval/labels/nguyen_tung_duong.yaml`. Hướng dẫn: `data/eval/templates/README.md`.
+
+### Lệnh hay dùng
+
+| Việc | Lệnh |
+|---|---|
+| Kiểm danh sách ca, nhãn, kappa | `python scripts/eval_tools.py check` |
+| Ước tính số lời gọi LLM (không gọi API) | `python scripts/run_eval.py estimate --split dev` |
+| Chạy đánh giá | `python scripts/run_eval.py run --split dev [--cases C01,C02] [--configs A,B,C] [--runs 1]` |
+| Sinh bảng cho người (ánh xạ mù, chấm trích dẫn) | `python scripts/run_eval.py sheets --split dev` (sau khi chạy xong mọi cấu hình) |
+| Chấm điểm | `python scripts/run_eval.py score --split dev --provisional "<họ tên>"` |
+| Ước tính chi phí nếu dùng model tính phí | `python scripts/estimate_cost.py` → `docs/COST_ESTIMATE.md` |
 
 ## Parse văn bản OCR (Phase 1)
 
@@ -89,7 +193,7 @@ python -m pip install -e ".[dev]"
 
 Cần cài dạng editable (`-e`) để `steel_xai` tìm đúng thư mục `configs/`; có thể ghi đè bằng biến môi trường `STEEL_XAI_CONFIG_DIR`.
 
-API key chỉ đặt qua biến môi trường có tên khai báo ở `configs/llm.yaml` (`api_key_env`, giá trị tạm chờ nhóm chốt provider). Không commit `.env`.
+API key chỉ đặt qua biến môi trường có tên khai báo ở `configs/llm.yaml` (`api_key_env`, hiện là `GEMINI_API_KEY`). Không commit `.env`.
 
 ## Test và lint
 

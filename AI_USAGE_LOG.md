@@ -581,3 +581,16 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+## 2026-10-25 — Phase 12 (bổ sung): chốt LLM free tier, ước tính chi phí model tính phí
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:** theo quyết định của nhóm, ghi chốt `gemini-3.5-flash-lite` free tier vào config/DEVIATIONS; viết `eval/cost.py`, `scripts/estimate_cost.py`, `configs/cost/pricing.yaml`, 3 test; sinh `docs/COST_ESTIMATE.md`. Giá tra từ trang giá chính thức của Google (2026-10-22) và bảng giá Anthropic (2026-10-06); nguồn bên thứ ba mâu thuẫn nhau về giá Gemini Flash nên không dùng.
+
+**Lỗi bắt được:** khoảng thấp–cao bị đảo (ít ký tự/token = nhiều token); token ra ban đầu không có khoảng bất định; test kiểm secret bắt nhầm tên biến `chars_per_token` (đã đổi cách viết).
+
+**Phần người cần tự xác minh:** kiểm lại giá ở hai trang nguồn trước khi trích dẫn; sau khi chạy free tier, chạy lại `estimate_cost.py --source measured` để thay giả định bằng số đo.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

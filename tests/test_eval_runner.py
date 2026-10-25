@@ -1311,3 +1311,65 @@ def test_report_rejected_rate():
     out = M.report_metrics(recs, ratings=None, citation_key=None, boot=BOOT)
     assert out["C"]["report_rejected"]["mean"] == 0.5
     assert out["C"]["numeric_mismatch_final"]["n_cases"] == 1  # bản bị từ chối không tính
+
+
+# ---------------- ước tính chi phí model tính phí (eval/cost.py)
+
+
+def test_pricing_file_loads_and_validates(tmp_path):
+    from steel_xai.eval import cost as K
+
+    prices, asm = K.load_pricing()
+    names = {p.model for p in prices}
+    assert load_config("llm")["model"] in names  # model đang dùng có trong bảng giá
+    assert {"claude-opus-5-5", "claude-haiku-5-5"} <= names
+    assert asm.output_band["low"] <= 1 <= asm.output_band["high"]
+    bad = tmp_path / "p.yaml"
+    bad.write_text("models: {x: {provider: a, input: 1}}\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="pricing.models.x"):
+        K.load_pricing(bad)
+
+
+def test_cost_bands_are_ordered_and_prompt_usage_is_real(tmp_path):
+    from steel_xai.eval import cost as K
+
+    prices, asm = K.load_pricing()
+    ctx, router = context(tmp_path)
+    case = replace(CASE, split="dev")
+    s = K.estimate_from_prompts(ctx, [case], ["A", "B", "C", "no_rag", "no_library"], 3, asm)
+    assert router.calls == []  # không gọi LLM
+    assert s.input["low"] < s.input["mid"] < s.input["high"]
+    assert s.output["low"] < s.output["mid"] < s.output["high"]
+    assert s.by_config["no_rag"] == {"input": 0.0, "output": 0.0}
+    assert s.by_config["B"]["input"] > s.by_config["A"]["input"]  # B có thêm đoạn truy xuất
+    assert s.by_config["C"]["output"] > s.by_config["A"]["output"]
+    rows = K.cost_table([s], prices)
+    for r in rows:
+        assert r["dev_low"] <= r["dev_mid"] <= r["dev_high"] and r["total_mid"] == r["dev_mid"]
+    md = K.render_markdown([s], rows, asm, "gemini-3.5-flash-lite", "2026-10-25")
+    assert "free tier" in md and "claude-opus-5-5" in md and "khảo sát khả thi" in md
+
+
+def test_cost_from_measured_records_skips_cached_and_extrapolates():
+    from steel_xai.eval import cost as K
+
+    recs = [
+        replace(
+            rec("A", "C1", "run1", []), tokens={"input": 1000, "output": 200}, llm={"calls": 1}
+        ),
+        replace(
+            rec("A", "C2", "run1", []), tokens={"input": 3000, "output": 400}, llm={"calls": 1}
+        ),
+        replace(
+            rec("A", "C3", "run1", []),
+            tokens={"input": 0, "output": 0},
+            llm={"calls": 1, "cache_hits": 1},
+        ),
+    ]
+    s = K.estimate_from_records(recs, n_cases=10, configs=["A", "C"], runs=3, split="test")
+    assert s.by_config["A"] == {"input": 2000 * 30, "output": 300 * 30}
+    assert "C" not in s.by_config  # chưa chạy: không ngoại suy bừa
+    assert s.input["low"] < s.input["mid"] < s.input["high"]
+    assert K.estimate_from_records([], 1, ["A"], 1, "dev") is None
+    p = K.Price("m", "x", 1.0, 2.0, False)
+    assert K.cost(1_000_000, 500_000, p) == pytest.approx(2.0)

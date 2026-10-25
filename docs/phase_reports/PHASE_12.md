@@ -16,6 +16,11 @@
 - **Sinh bảng cho người SAU KHI chạy xong mọi cấu hình.** Sinh lại sẽ đổi `item_id`; lệnh từ chối ghi đè key nếu không có `--overwrite`.
 - **Chấm tạm trên dev:** `score --split dev --provisional "Nguyễn Tùng Dương"` dùng nhãn của một người. Mọi bảng ghi rõ "ĐÁP ÁN TẠM". Tập test không chấm tạm được.
 
+### Cập nhật 2026-10-25: chốt LLM và ước tính chi phí
+
+- Nhóm chốt `gemini-3.5-flash-lite` **free tier** cho cả đánh giá chính thức: `configs/llm.yaml`, `eval.runner.pricing` = 0, dòng DEVIATIONS đã cập nhật.
+- `docs/COST_ESTIMATE.md` (sinh bởi `scripts/estimate_cost.py`, không gọi API): chi phí nếu chạy cùng khối lượng (11 ca × 8 cấu hình × 3 lần) bằng model tính phí. Giá trong `configs/cost/pricing.yaml` (nguồn: trang giá Google ngày 2026-10-22, bảng giá Anthropic ngày 2026-10-06), đặt ngoài `freeze_globs` nên sửa giá không làm lệch freeze. Token vào đo từ prompt dựng trên dữ liệu thật; token ra là giả định (khoảng ×0,5–×2). Sau khi chạy free tier, `--source measured` dùng token đo thật.
+
 ## Phase này để làm gì?
 
 Trả lời RQ1–RQ3 bằng số đo được: chạy ba cấu hình A (LLM only), B (LLM + RAG), C (Full System), chạy phụ (A/B nhận danh sách thư viện) và 3 ablation, mỗi ca 3 lần. Sau đó tính metric mục 15.3 kèm CI, xuất bảng/biểu đồ, và sinh bảng cho người (ánh xạ mù, chấm trích dẫn, UNVERIFIED, ca sai).

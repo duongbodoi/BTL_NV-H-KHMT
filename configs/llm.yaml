@@ -3,6 +3,8 @@
 # thay đổi chúng làm hash của freeze (spec mục 15.1) lệch.
 #
 # provider: anthropic | gemini. Từ 2026-10-24 nhóm chọn `gemini` (hạn mức miễn phí) để CHẠY THỬ pipeline.
+# 2026-10-25: NHÓM CHỐT dùng gemini-3.5-flash-lite free tier cho CẢ đánh giá chính thức (A/B/C,
+# chạy phụ, ablation). Chi phí thật = 0; chi phí nếu dùng model tính phí: docs/COST_ESTIMATE.md.
 # Đổi provider/model là đổi cấu hình đánh giá: A/B/C phải dùng cùng một provider/model đã chốt trước
 # khi đóng băng (xem DEVIATIONS_FROM_MIDTERM.md). Muốn quay lại Claude: provider: anthropic,
 # model: claude-opus-5-5, api_key_env: ANTHROPIC_API_KEY.
