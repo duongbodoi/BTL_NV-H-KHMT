@@ -545,3 +545,39 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+## 2026-10-25 — Hỗ trợ nội dung Phase 12a (chép nhãn theo lời người gán)
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:**
+- Chia dev/test: nhóm (Nguyễn Tùng Dương) duyệt quy tắc "lấy toàn bộ 11 ca vượt ngưỡng, 4 dev + 7 test, ngẫu nhiên phân tầng theo loại bất thường"; Claude chạy quy tắc với seed `20261025` → `data/eval/cases.yaml`. Claude không chọn ca theo phán đoán.
+- Chép câu trả lời của Nguyễn Tùng Dương thành `data/eval/labels/nguyen_tung_duong.yaml` (4 ca dev). Claude hỏi theo mẫu trung lập (liệt kê đủ mọi giả thuyết hợp lệ), KHÔNG gợi ý giả thuyết, KHÔNG tìm/đọc nguồn thay người gán; chỉ nhắc các điểm định dạng (thiếu mô tả `other`, ngày nguồn, nguồn ra trong kỳ).
+
+**Phần người cần tự xác minh:** đọc lại file nhãn so với câu trả lời gốc; người gán thứ hai (Hoàng Minh Đức) gán trong phiên riêng, không xem file của người thứ nhất.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-
+
+## 2026-10-25 — Phase 12 (Baselines + Evaluation: runner, metric, bảng)
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:**
+- Audit-first: chưa có runner/metric; tái dùng pipeline Phase 5–11 và công cụ Phase 12a. Viết `eval/{baselines,runner,metrics,export,references}.py`, `RunRecord`, `scripts/run_eval.py`, 37 test (LLM giả, không tốn token). Chưa gọi API thật.
+- Đề xuất (chờ nhóm chốt): truy vấn chung của baseline B, `other_counts_as_hit: false`, cách tính Hit@k khi hòa hạng (kỳ vọng + cận), luật ca sai "quá nửa số lần chạy", ablation no_library chỉ có check văn bản.
+- KHÔNG điền ánh xạ mù, chấm trích dẫn, nguyên nhân UNVERIFIED hay nguyên nhân ca sai (spec 21.1): code chỉ sinh khung bảng và tổng hợp.
+
+**Lỗi/sai sót bắt được:**
+- Review độc lập (subagent): 0 CRITICAL, 4 HIGH, 10 MEDIUM, 6 LOW; đã sửa mọi HIGH/MEDIUM (ánh xạ mù trùng khóa khi hòa hạng, lỗi LLM của C bị nuốt, resume trộn phiên bản, cache làm sai chi phí...; xem `PHASE_12.md` mục 5).
+- Claude tự bắt: lại lỗi heredoc biến `\b` thành backspace trong regex (đã sửa, quét toàn repo).
+- Claude tự bắt khi viết test: test đếm bảng sai (đếm chuỗi `|---|` thay vì số bảng); LLM giả ban đầu gán `support` cho mọi đoạn có chữ "dự trữ" bất kể giả thuyết nào, làm kỳ vọng của test no_library sai (lỗi của test, không phải của runner).
+
+**Phần người cần tự xác minh:**
+- Chốt provider/model, giá token, `baseline_queries`, `other_counts_as_hit`, chỉ số thành công TRƯỚC khi đóng băng.
+- Chạy thử `run --split dev --runs 1 --cases C01` trước khi chạy cả tập; đọc `summary.md` và vài `RunRecord` JSON.
+- Đọc cách tính Hit@k khi hòa hạng (PHASE_12 mục 3) và đồng ý trước khi báo cáo.
+- Điền bảng ánh xạ mù / chấm trích dẫn (2 người + người thứ ba), bảng UNVERIFIED, bảng ca sai.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

@@ -147,7 +147,8 @@ def labelset(who, refs, statuses=None):
 
 def test_repo_eval_config_loads_and_templates_exist():
     s = load_eval_settings()
-    assert s.split == {"dev": 5, "test": 13} and s.annotators == 2 and s.other_id == "other"
+    # nhóm giảm từ 5/13 (spec) còn 4/7 ca, ghi ở DEVIATIONS_FROM_MIDTERM.md (2026-10-25)
+    assert s.split == {"dev": 4, "test": 7} and s.annotators == 2 and s.other_id == "other"
     assert s.failure_causes == (
         "retrieval_miss", "rule_wrong", "llm_classification_wrong", "ambiguous_reference",
         "data_missing",
@@ -655,7 +656,8 @@ def test_repo_manifest_covers_code_data_configs_library_and_prompts():
     ):
         assert must in f, must
     assert "configs/eval_freeze.json" not in f and not any("__pycache__" in k for k in f)
-    assert set(m["prompts"]) == {"llm_evidence", "report"} and all(m["prompts"].values())
+    assert set(m["prompts"]) == {"baselines", "llm_evidence", "report"}
+    assert all(m["prompts"].values())
 
 
 def test_llm_prompt_fingerprint_covers_user_prompt_wording(monkeypatch):

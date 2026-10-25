@@ -632,3 +632,73 @@ class CaseRecord:
             reference_statuses=dict(d.get("reference_statuses") or {}),
             note=d.get("note", ""),
         )
+
+
+RUN_STATUSES = ("ok", "error")
+
+
+@dataclass(frozen=True)
+class RunRecord:
+    """Kết quả một lần chạy (ca × cấu hình × lần) của Phase 12 (spec mục 14, 18).
+
+    `outputs` theo cùng khung cho mọi cấu hình: `mode` (`free` | `library`), `ranking` (danh sách
+    {rank, hypothesis_id, text, status}), `report` (khẳng định + metric bản nháp, chỉ A/B/C),
+    `verdicts` (cấu hình có kiểm chứng). `tokens`/`latency_s` đo thật từ nhật ký LLM. `freeze`:
+    `FreezeCheck.to_dict()` khi chạy tập test (bắt buộc ghi, kể cả lý do bỏ qua freeze).
+    """
+
+    case_id: str
+    split: str
+    anomaly_id: str
+    config: str
+    run_id: str
+    status: str
+    outputs: dict[str, Any] = field(default_factory=dict)
+    tokens: dict[str, int] = field(default_factory=dict)  # input, output (token tính tiền)
+    latency_s: float = 0.0  # thời gian chạy thật của cả lần chạy (giây)
+    llm: dict[str, Any] = field(default_factory=dict)  # calls, cache_hits, failures, model...
+    error: str = ""
+    freeze: dict[str, Any] | None = None
+    # băm code + config + dữ liệu + prompt lúc chạy (không gồm nhãn): resume chỉ giữ bản cùng băm
+    fingerprint: str = ""
+
+    def __post_init__(self) -> None:
+        if self.split not in SPLITS:
+            raise ValueError(f"split phải thuộc {SPLITS}, nhận {self.split!r}")
+        if self.status not in RUN_STATUSES:
+            raise ValueError(f"status phải thuộc {RUN_STATUSES}, nhận {self.status!r}")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "case_id": self.case_id,
+            "split": self.split,
+            "anomaly_id": self.anomaly_id,
+            "config": self.config,
+            "run_id": self.run_id,
+            "status": self.status,
+            "outputs": self.outputs,
+            "tokens": dict(self.tokens),
+            "latency_s": self.latency_s,
+            "llm": dict(self.llm),
+            "error": self.error,
+            "freeze": self.freeze,
+            "fingerprint": self.fingerprint,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> RunRecord:
+        return cls(
+            case_id=d["case_id"],
+            split=d["split"],
+            anomaly_id=d["anomaly_id"],
+            config=d["config"],
+            run_id=d["run_id"],
+            status=d["status"],
+            outputs=dict(d.get("outputs") or {}),
+            tokens=dict(d.get("tokens") or {}),
+            latency_s=float(d.get("latency_s") or 0.0),
+            llm=dict(d.get("llm") or {}),
+            error=d.get("error", ""),
+            freeze=d.get("freeze"),
+            fingerprint=d.get("fingerprint", ""),
+        )

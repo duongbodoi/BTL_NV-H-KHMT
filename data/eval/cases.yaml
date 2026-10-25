@@ -1,0 +1,49 @@
+# Danh sách ca (spec mục 15, 15.1). Nhóm duyệt quy tắc chọn ngày 2026-10-25 (Nguyễn Tùng Dương):
+# - lấy TOÀN BỘ 11 bất thường vượt ngưỡng trong anomaly_candidates.csv (không lọc theo phán đoán);
+# - chia 4 dev + 7 test, ngẫu nhiên phân tầng theo loại (dev: 3 tồn kho + 1 biên), random.Random(20261025),
+#   bốc trên danh sách anomaly_id đã sắp xếp; tồn kho bốc trước, biên sau.
+cases:
+  - case_id: C01
+    anomaly_id: "NKG|FY2021|inventory_increase|up"
+    split: dev
+    note: "toàn bộ ca vượt ngưỡng; split ngẫu nhiên phân tầng"
+  - case_id: C02
+    anomaly_id: "HSG|FY2021|inventory_increase|up"
+    split: dev
+    note: "toàn bộ ca vượt ngưỡng; split ngẫu nhiên phân tầng"
+  - case_id: C03
+    anomaly_id: "HPG|FY2022|gross_margin_change|down"
+    split: test
+    note: "toàn bộ ca vượt ngưỡng; split ngẫu nhiên phân tầng"
+  - case_id: C04
+    anomaly_id: "NKG|FY2017|inventory_increase|up"
+    split: test
+    note: "toàn bộ ca vượt ngưỡng; split ngẫu nhiên phân tầng"
+  - case_id: C05
+    anomaly_id: "HSG|FY2017|inventory_increase|up"
+    split: dev
+    note: "toàn bộ ca vượt ngưỡng; split ngẫu nhiên phân tầng"
+  - case_id: C06
+    anomaly_id: "HSG|FY2016|gross_margin_change|up"
+    split: dev
+    note: "toàn bộ ca vượt ngưỡng; split ngẫu nhiên phân tầng"
+  - case_id: C07
+    anomaly_id: "HPG|FY2021|inventory_increase|up"
+    split: test
+    note: "toàn bộ ca vượt ngưỡng; split ngẫu nhiên phân tầng"
+  - case_id: C08
+    anomaly_id: "HSG|FY2022|gross_margin_change|down"
+    split: test
+    note: "toàn bộ ca vượt ngưỡng; split ngẫu nhiên phân tầng"
+  - case_id: C09
+    anomaly_id: "HSG|FY2018|inventory_increase|down"
+    split: test
+    note: "toàn bộ ca vượt ngưỡng; split ngẫu nhiên phân tầng"
+  - case_id: C10
+    anomaly_id: "NKG|FY2018|inventory_increase|down"
+    split: test
+    note: "toàn bộ ca vượt ngưỡng; split ngẫu nhiên phân tầng"
+  - case_id: C11
+    anomaly_id: "NKG|FY2021|gross_margin_change|up"
+    split: test
+    note: "toàn bộ ca vượt ngưỡng; split ngẫu nhiên phân tầng"

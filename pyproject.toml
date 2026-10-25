@@ -40,3 +40,4 @@ select = ["E", "F", "I", "B", "UP"]
 [tool.ruff.lint.per-file-ignores]
 # Prompt tiếng Việt dài một dòng có chủ đích (chuỗi được băm vào freeze, không ngắt tùy ý).
 "src/steel_xai/llm/prompts.py" = ["E501"]
+"src/steel_xai/eval/baselines.py" = ["E501"]

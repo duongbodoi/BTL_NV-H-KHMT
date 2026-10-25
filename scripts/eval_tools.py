@@ -19,23 +19,11 @@ from steel_xai.eval import (
     FreezeError,
     build_manifest,
     diff_manifest,
-    disagreements,
-    final_references,
-    load_case_context,
-    load_cases,
     load_eval_settings,
-    load_label_sets,
-    load_rag_index,
     read_freeze,
-    reference_agreement,
-    reference_kappa,
-    status_kappa,
-    taxonomy_from_library,
-    validate_adjudication,
     write_freeze,
 )
-from steel_xai.eval.cases import read_yaml
-from steel_xai.hypotheses import load_library
+from steel_xai.eval.references import load_references
 from steel_xai.hypotheses.library import load_library_settings, person_name_problem
 
 
@@ -62,38 +50,21 @@ def cmd_candidates() -> int:
 
 def _final_cases(strict_counts: bool = False):
     """(settings, ca kèm đáp án cuối nếu đủ, danh sách lỗi). In mọi lỗi/cảnh báo/kappa."""
-    s = load_eval_settings()
-    cc = load_cases(s, load_case_context(), strict_counts=strict_counts)
-    _print("Lỗi danh sách ca", list(cc.errors))
-    _print("Cảnh báo danh sách ca", list(cc.warnings))
-    if not cc.cases:
-        return s, (), list(cc.errors) or ["không có ca hợp lệ"]
-    n_split = {sp: sum(c.split == sp for c in cc.cases) for sp in ("dev", "test")}
-    print(f"Ca hợp lệ: {len(cc.cases)} ({n_split})")
-    taxonomy = taxonomy_from_library(load_library().reviewed)
-    lib_s = load_library_settings()
-    sets, errs, warns = load_label_sets(cc.cases, taxonomy, s, lib_s, load_rag_index())
-    _print("Lỗi nhãn", errs)
-    _print("Cảnh báo nhãn", warns)
-    if len(sets) != 2:
-        return s, cc.cases, [*cc.errors, *errs]
-    a, b = sets
-    k_ref = reference_kappa(a, b, cc.cases, taxonomy, s.other_id)
-    print(f"Kappa đáp án ({a.annotator} / {b.annotator}): {k_ref.to_dict()}")
-    print(f"Đồng thuận theo ca: {reference_agreement(a, b)}")
-    print(f"Kappa trạng thái: {status_kappa(a, b).to_dict()}")
-    dis = disagreements(a, b)
-    _print("Bất đồng cần người thứ ba", [f"{c}: {'; '.join(w)}" for c, w in dis.items()])
-    raw = read_yaml(s.adjudication_path) if s.adjudication_path.is_file() else None
-    _, decisions, adj_errs = validate_adjudication(
-        raw, cc.cases, [a.annotator, b.annotator], taxonomy, s, lib_s
-    )
-    _print("Lỗi adjudication", adj_errs)
-    final, ferrs = final_references(cc.cases, a, b, decisions)
-    _print("Chưa có đáp án cuối", ferrs)
-    print(f"Ca có đáp án cuối: {len(final)}/{len(cc.cases)}")
-    all_errs = [*cc.errors, *errs, *adj_errs, *ferrs]
-    return s, (final if not ferrs else cc.cases), all_errs
+    r = load_references(strict_counts=strict_counts)
+    _print("Lỗi", r.errors)
+    _print("Cảnh báo", r.warnings)
+    if r.cases:
+        n_split = {sp: sum(c.split == sp for c in r.cases) for sp in ("dev", "test")}
+        print(f"Ca hợp lệ: {len(r.cases)} ({n_split})")
+    if "kappa_reference" in r.info:
+        a, b = r.info["annotators"]
+        print(f"Kappa đáp án ({a} / {b}): {r.info['kappa_reference']}")
+        print(f"Đồng thuận theo ca: {r.info['agreement']}")
+        print(f"Kappa trạng thái: {r.info['kappa_status']}")
+        dis = r.info["disagreements"]
+        _print("Bất đồng cần người thứ ba", [f"{c}: {'; '.join(w)}" for c, w in dis.items()])
+        print(f"Ca có đáp án cuối: {r.info['final_cases']}/{len(r.cases)}")
+    return r.settings, r.cases, r.errors
 
 
 def cmd_check() -> int:

@@ -64,10 +64,15 @@ def _cases_part(cases: Sequence[CaseRecord], split: str) -> dict[str, Any]:
 
 
 def default_prompt_fingerprints() -> dict[str, str]:
+    from steel_xai.eval.baselines import baseline_prompt_fingerprint
     from steel_xai.llm.prompts import prompt_fingerprint
     from steel_xai.report.prompts import report_prompt_fingerprint
 
-    return {"llm_evidence": prompt_fingerprint(), "report": report_prompt_fingerprint()}
+    return {
+        "baselines": baseline_prompt_fingerprint(),
+        "llm_evidence": prompt_fingerprint(),
+        "report": report_prompt_fingerprint(),
+    }
 
 
 def _check_config_dir(root: Path) -> None:

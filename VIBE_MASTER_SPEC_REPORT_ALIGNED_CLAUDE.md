@@ -837,8 +837,8 @@ Trạng thái ban đầu:
 - Phase 9: IN PROGRESS (2026-10-24; code xong, qua review, chưa gọi API thật; xem docs/phase_reports/PHASE_9.md)
 - Phase 10: IN PROGRESS (2026-10-24; code xong, qua review; chờ nhóm xác nhận 3 lựa chọn luật và có giả thuyết reviewed, xem docs/phase_reports/PHASE_10.md)
 - Phase 11: IN PROGRESS (2026-10-24; code xong, qua review, chưa gọi API thật; xem docs/phase_reports/PHASE_11.md)
-- Phase 12a: NOT STARTED
-- Phase 12: NOT STARTED
+- Phase 12a: IN PROGRESS (2026-10-25; công cụ xong, qua review; 11 ca 4 dev + 7 test; đang gán nhãn, xem docs/phase_reports/PHASE_12a.md)
+- Phase 12: IN PROGRESS (2026-10-25; runner/metric/bảng xong, test bằng LLM giả, chưa gọi API thật; xem docs/phase_reports/PHASE_12.md)
 - Phase 13: NOT STARTED
 - Phase 14: NOT STARTED
 

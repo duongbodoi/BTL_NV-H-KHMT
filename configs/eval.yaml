@@ -1,12 +1,14 @@
 # Đánh giá (spec mục 14, 15). Số ca/chia dev-test theo spec; danh sách ca do nhóm chọn.
 runs_per_case: 3
-target_cases: 18
+target_cases: 11   # spec: 18; nhóm giảm còn 11 (toàn bộ ca vượt ngưỡng), xem DEVIATIONS_FROM_MIDTERM.md
 split:
-  dev: 5
-  test: 13
+  dev: 4
+  test: 7
 
 configs: [A, B, C]
 ablations: [no_rag, no_verification, no_library]  # spec mục 14.2; tên tạm, nhóm xác nhận
+# Chạy phụ (spec 14.1): A và B nhận cùng danh sách giả thuyết của thư viện thay vì sinh tự do.
+secondary_configs: [A_lib, B_lib]
 
 # Câu bắt buộc xuất hiện trong mọi bảng kết quả (spec mục 15).
 disclaimer: "Kết quả là khảo sát khả thi, không phải kết luận thống kê (cỡ mẫu nhỏ)."
@@ -57,3 +59,48 @@ freeze_globs:
   - "data/eval/labels/*.yaml"
 # Lý do bỏ qua freeze (--unfreeze-reason) tối thiểu bấy nhiêu ký tự; lý do được ghi vào kết quả.
 min_unfreeze_reason_chars: 15
+
+# ---- Phase 12: runner + metric (spec mục 14, 15.3-15.8). Giá trị dưới đây là ĐỀ XUẤT khởi điểm của
+# Claude (2026-10-25); nhóm chốt trên tập dev, TRƯỚC khi đóng băng (đổi sau đó làm hash freeze lệch).
+runner:
+  output_dir: outputs/eval            # kết quả chạy (RunRecord JSON) và bảng; không commit (.gitignore)
+  # Thư mục bảng cho NGƯỜI điền (ánh xạ mù, chấm trích dẫn, UNVERIFIED, ca sai). Key giải mù nằm
+  # trong output_dir (không đưa cho người ánh xạ).
+  sheets_dir: data/eval/sheets
+  max_hypotheses: 5                   # A/B/no_library sinh tối đa bấy nhiêu giả thuyết (đủ cho top-3)
+  # Truy vấn chung của baseline B theo loại bất thường: KHÔNG lấy từ thư viện (B không có thư viện).
+  # Nhóm duyệt: truy vấn quá sát thư viện sẽ làm B mạnh lên một cách không công bằng và ngược lại.
+  baseline_queries:
+    inventory_increase:
+      - hàng tồn kho
+      - nguyên vật liệu tồn kho
+      - thành phẩm tồn kho
+      - dự phòng giảm giá hàng tồn kho
+      - hàng mua đang đi đường
+      - giá vốn hàng bán
+    gross_margin_change:
+      - lợi nhuận gộp
+      - giá vốn hàng bán
+      - doanh thu bán hàng
+      - giá bán sản phẩm thép
+      - giá nguyên vật liệu đầu vào
+      - dự phòng giảm giá hàng tồn kho
+  max_passages: 12                    # số đoạn tối đa đưa cho B / B_lib / no_verification
+  # `other` trong đáp án có tính là trúng khi giả thuyết của A/B được ánh xạ về `other` không?
+  # false (mặc định, thận trọng): hai "other" có thể là hai nguyên nhân khác nhau; C không sinh được
+  # `other` nên tính trúng sẽ thiên vị A/B. Nhóm chốt trước khi chạy test.
+  other_counts_as_hit: false
+  top_ks: [1, 3]
+  # Chấm trích dẫn (citation support rate, spec 15.3): hai người chấm mù; chỉ `supports` tính là hỗ trợ.
+  citation_ratings: [supports, partial, not_supports]
+  # Nguyên nhân thật của một UNVERIFIED (chất lượng UNVERIFIED, spec 15.3/15.6). Người gán.
+  unverified_causes: [public_data_insufficient, retrieval_miss, rule_wrong, data_extraction_error, other]
+  bootstrap:
+    samples: 2000
+    seed: 20261025
+    level: 0.95
+  # Giá token để tính tiền mỗi ca (spec 15.3). null = chưa khai: chỉ báo token, không báo tiền.
+  pricing:
+    currency: USD
+    input_per_mtok: null
+    output_per_mtok: null

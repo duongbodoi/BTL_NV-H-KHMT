@@ -1,0 +1,58 @@
+# Nhãn của người gán 1 (spec mục 15.2). Nội dung do Nguyễn Tùng Dương trả lời (2026-10-25);
+# Claude chỉ chép thành YAML, không gợi ý giả thuyết, không tìm nguồn.
+annotator: "Nguyễn Tùng Dương"
+labels:
+  - case_id: C01
+    reference_set: [inventory_raw_material_stockpiling, other]
+    statuses: {}
+    sources:
+      - title: "MBS – Báo cáo NKG"
+        date: "2022-02-28"
+        url: "https://mbs.com.vn/media/xionyyrt/nkg_28-02-2022.pdf"
+        page: ""
+      - title: "KBSV – Báo cáo lần đầu NKG"
+        date: "2022-09-08"   # in dưới tiêu đề trang bìa ("Giá hiện tại (Sep 7)"); 20220809 trong tên file không phải ngày phát hành
+        url: "https://www.kbsec.com.vn/pic/Service/KBSV_NKG_Baocaolandau_20220809%20(2).pdf"
+        page: ""
+    note: "INV-1 khớp một phần."
+
+  - case_id: C02
+    reference_set: [inventory_price_not_volume, other]
+    statuses: {}
+    sources:
+      - title: "VietnamBiz – Tài sản của Hoa Sen tăng hơn 7.400 tỷ, chủ yếu nhờ hàng tồn kho"
+        date: "2021-07-27"
+        url: "https://vietnambiz.vn/tai-san-cua-hoa-sen-tang-hon-7400-ty-chu-yeu-nho-hang-ton-kho-20210727184033881.htm"
+        page: ""
+    note: >-
+      INV-5: giá HRC đầu vào và giá thép thành phẩm tăng nhanh; theo Hiệp hội Thép lượng tồn tôn mạ chỉ tăng 9,5%,
+      nên phần lớn mức tăng tồn kho là do giá. OTHER: hàng hóa tăng gấp đôi do mở rộng chuỗi bán lẻ Hoa Sen Home
+      (thư viện chưa có giả thuyết này; INV-2 chỉ nói mở rộng sản xuất). Nguồn trong kỳ, số liệu đến 30/6/2021
+      (phủ 9/12 tháng niên độ); chưa có nguồn ra sau 30/9/2021.
+
+  - case_id: C05
+    reference_set: [inventory_raw_material_stockpiling]
+    statuses: {}
+    sources:
+      - title: "VietnamFinance – Tương lai nào cho Tập đoàn Hoa Sen?"
+        date: "2019-01-14"
+        url: "https://vietnamfinance.vn/tuong-lai-nao-cho-tap-doan-hoa-sen-d30458.html"
+        page: ""
+    note: "INV-1 khớp một phần."
+
+  - case_id: C06
+    reference_set: [margin_inventory_cost_effect, margin_input_cost_lag]
+    statuses: {}
+    sources:
+      - title: "Báo Đầu tư – Hoa Sen và góc khuất biên lợi nhuận gộp"
+        date: "2020-07-09"
+        url: "https://baodautu.vn/hoa-sen-va-goc-khuat-bien-loi-nhuan-gop-d125427.html"
+        page: ""
+      - title: "MBS – Báo cáo HSG"
+        date: "2016-01-27"
+        url: "https://mbs.com.vn/media/khrnvwd4/hsg_27012016.pdf"
+        page: ""
+    note: >-
+      GM-3 (chính, nguồn Báo Đầu tư ra sau kỳ): HSG mua HRC khi giá chạm đáy năm 2015 rồi giá tăng; "Chiến lược này giúp
+      biên lãi gộp của Công ty liên tục cải thiện và đạt đỉnh 26% trong quý III năm 2016" (quý cuối FY2016).
+      GM-2 (phụ, nguồn MBS trong kỳ): giá HRC nhập khẩu giảm ở các quý đầu niên độ. Ngày nguồn MBS lấy theo tên file.
