@@ -1,0 +1,8 @@
+# MẪU danh sách ca (spec mục 15, 15.1). NHÓM chọn ca và chia dev/test; Claude không chọn.
+# Chép thành data/eval/cases.yaml rồi điền. Xem ứng viên: python scripts/eval_tools.py candidates
+# Số ca dev/test phải khớp configs/eval.yaml (split) khi đóng băng.
+cases:
+  - case_id: C01                                   # chữ/số/_/-, duy nhất
+    anomaly_id: "<CÔNG_TY>|FY<năm>|<loại>|<up|down>"  # đúng id trong anomaly_candidates.csv
+    split: dev                                      # dev | test
+    note: ""                                        # lý do chọn (tùy chọn)

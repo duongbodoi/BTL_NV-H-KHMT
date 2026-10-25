@@ -1,0 +1,8 @@
+# MẪU giải quyết bất đồng (spec mục 15.2). Người thứ ba (KHÁC hai người gán) quyết định cho từng ca
+# mà `python scripts/eval_tools.py check` báo bất đồng. Chép thành data/eval/adjudication.yaml.
+adjudicator: "<Họ và tên người thứ ba>"
+decisions:
+  - case_id: C01
+    reference_set: [<id_giả_thuyết>]   # khi bất đồng về đáp án
+    statuses: {}                        # khi bất đồng về trạng thái
+    note: "<lý do quyết định>"          # bắt buộc

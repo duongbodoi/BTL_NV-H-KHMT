@@ -15,3 +15,45 @@ disclaimer: "Kết quả là khảo sát khả thi, không phải kết luận t
 success_criteria: null
 
 freeze_file: configs/eval_freeze.json
+
+# ---- Phase 12a: bộ ca, nhãn, freeze (spec mục 15). Claude chỉ dựng công cụ; nội dung do nhóm làm.
+# File do NHÓM điền (mẫu ở data/eval/templates/).
+paths:
+  cases: data/eval/cases.yaml            # danh sách ca + chia dev/test
+  labels_dir: data/eval/labels           # mỗi người gán nhãn một file <tên>.yaml, gán ĐỘC LẬP
+  adjudication: data/eval/adjudication.yaml  # người thứ ba giải quyết bất đồng
+
+# Số người gán nhãn độc lập (spec 15.2: hai người; kappa tính giữa hai người này).
+annotators: 2
+# Mã "ngoài thư viện" trong đáp án và ánh xạ mù (spec 14.1, 15.2).
+other_id: other
+
+# Nguồn của nhãn phải ĐỘC LẬP với kho RAG (spec 15.2). Mỗi nguồn: title, date, và url hoặc doc_id.
+# Validator (đọc kho từ retrieval.chunks_file): LỖI khi doc_id thuộc kho hoặc nguồn chứa chuỗi
+# doc_id của kho; CẢNH BÁO khi nguồn trông như BCTC của công ty + năm đã nạp vào kho (có thể là chính
+# tài liệu đó dưới tên/link khác). Nguồn ghi tự do khác validator không kiểm được: người duyệt kiểm.
+min_source_title_chars: 8
+
+# Nguyên nhân ca sai (spec 15.5). Người gán; Claude chỉ dựng template và bảng tổng hợp.
+failure_causes: [retrieval_miss, rule_wrong, llm_classification_wrong, ambiguous_reference, data_missing]
+
+# Freeze (spec 15.1): băm các file này (đã chuẩn hóa xuống dòng) + dấu vân tay prompt + danh sách ca
+# và đáp án cuối. Gồm CODE (luật kiểm chứng, bộ kiểm báo cáo nằm trong src/), dữ liệu đầu vào (giá,
+# kho RAG, mốc as-of, ứng viên) và file ca/nhãn. Sửa bất kỳ file nào sau khi đóng băng → runner từ
+# chối chạy test trừ khi có --unfreeze-reason (được ghi vào kết quả). OCR thô (data/raw) không băm
+# (lớn); nó đi qua rag_chunks.jsonl và anomaly_candidates.csv đã băm.
+freeze_globs:
+  - "configs/*.yaml"
+  - "hypotheses/*.yaml"
+  - "HYPOTHESIS_LIBRARY_DRAFT.md"
+  - "pyproject.toml"
+  - "src/**/*.py"
+  - "scripts/*.py"
+  - "data/external/*"
+  - "data/processed/rag_chunks.jsonl"
+  - "data/processed/asof_dates.csv"
+  - "data/processed/anomaly_candidates.csv"
+  - "data/eval/*.yaml"
+  - "data/eval/labels/*.yaml"
+# Lý do bỏ qua freeze (--unfreeze-reason) tối thiểu bấy nhiêu ký tự; lý do được ghi vào kết quả.
+min_unfreeze_reason_chars: 15

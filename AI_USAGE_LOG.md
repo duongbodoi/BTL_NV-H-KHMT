@@ -524,3 +524,24 @@ Mỗi phase Claude thêm một mục (spec mục 26.1): ngày, phase, việc Cla
 
 **Cách nhóm đã kiểm tra (nhóm điền):**
 -
+
+## 2026-10-25 — Phase 12a (Bộ ca và đáp án tham chiếu: công cụ)
+
+**Công cụ:** Claude Code (Claude Opus 5.5).
+
+**Việc Claude đã làm:**
+- Audit-first: `src/steel_xai/eval/` và `data/eval/` trống. Viết `eval/{settings,cases,labels,freeze,worksheets}.py`, `CaseRecord`, `scripts/eval_tools.py`, mẫu trong `data/eval/templates/`, 78 test. KHÔNG chọn ca, KHÔNG gán nhãn, KHÔNG viết đáp án (spec 21.1).
+- Review độc lập (subagent): 0 CRITICAL, 3 HIGH, 8 MEDIUM, 6 LOW; đã sửa tất cả HIGH/MEDIUM và 5/6 LOW (xem `PHASE_12a.md` mục 5).
+
+**Lỗi/sai sót bắt được:**
+- Từ review: freeze ban đầu không băm code/dữ liệu/nhãn, lách được bằng biến môi trường, chạy được test khi chưa đóng băng; kappa phồng theo cỡ thư viện; quyết định adjudication lỗi vẫn vào đáp án; ánh xạ mù đoán được nếu biết seed.
+- Claude tự bắt: script sửa file qua heredoc biến `\b` thành ký tự backspace trong regex (đã sửa); khi quét thì phát hiện **lỗi cũ cùng loại ở Phase 6** (`hypotheses/library.py`, regex danh mục nguồn) khiến danh mục S0.. không bao giờ khớp, đã sửa. Năm của trường `date` bị lấy để so với kho RAG (BCTC năm X công bố năm X+1), đã sửa.
+
+**Phần người cần tự xác minh:**
+- Chọn ca, chia dev/test (11 ứng viên so với 18 ca của spec: quyết thêm ca hay đổi `eval.split` và ghi DEVIATIONS).
+- Hai người gán nhãn độc lập, người thứ ba giải quyết bất đồng; kiểm nguồn nhãn thật sự độc lập với kho RAG (code chỉ bắt được một phần).
+- Đọc cách tính kappa (PHASE_12a mục 3) và đồng ý trước khi báo cáo.
+- Đóng băng sau khi xong runner Phase 12 và tập dev; commit `eval_freeze.json`.
+
+**Cách nhóm đã kiểm tra (nhóm điền):**
+-

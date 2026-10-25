@@ -5,7 +5,7 @@ Chỉ định nghĩa những gì phase hiện tại cần; các contract khác t
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any
@@ -574,4 +574,61 @@ class HypothesisVerdict:
             critical_total=d.get("critical_total", 0),
             critical_passed=d.get("critical_passed", 0),
             supporting_passed=d.get("supporting_passed", 0),
+        )
+
+
+SPLITS = ("dev", "test")
+
+
+@dataclass(frozen=True)
+class CaseRecord:
+    """Một ca đánh giá (spec mục 15, 18). Ca và chia dev/test do NHÓM chọn; Claude không chọn.
+
+    `reference_set`: tập id giả thuyết đúng (kể cả `other`) SAU khi hai người gán và người thứ ba
+    giải quyết bất đồng; rỗng khi chưa có nhãn cuối. `reference_sources`: nguồn độc lập với kho RAG.
+    `reference_statuses`: trạng thái chuẩn cho từng cặp (ca, giả thuyết), dùng cho verification
+    accuracy (spec 15.3); có thể rỗng.
+    """
+
+    case_id: str
+    split: str
+    anomaly_id: str
+    reference_set: tuple[str, ...] = ()
+    reference_sources: tuple[dict[str, str], ...] = ()
+    reference_statuses: dict[str, str] = field(default_factory=dict)
+    note: str = ""
+
+    def __post_init__(self) -> None:
+        if self.split not in SPLITS:
+            raise ValueError(f"split phải thuộc {SPLITS}, nhận {self.split!r}")
+
+    @property
+    def anomaly_type(self) -> str:
+        return self.anomaly_id.split("|")[2]
+
+    @property
+    def direction(self) -> str:
+        return self.anomaly_id.split("|")[3]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "case_id": self.case_id,
+            "split": self.split,
+            "anomaly_id": self.anomaly_id,
+            "reference_set": list(self.reference_set),
+            "reference_sources": [dict(s) for s in self.reference_sources],
+            "reference_statuses": dict(self.reference_statuses),
+            "note": self.note,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> CaseRecord:
+        return cls(
+            case_id=d["case_id"],
+            split=d["split"],
+            anomaly_id=d["anomaly_id"],
+            reference_set=tuple(d.get("reference_set", ())),
+            reference_sources=tuple(dict(s) for s in d.get("reference_sources", ())),
+            reference_statuses=dict(d.get("reference_statuses") or {}),
+            note=d.get("note", ""),
         )

@@ -1,0 +1,18 @@
+# MẪU file nhãn của MỘT người gán (spec mục 15.2). Hai người gán ĐỘC LẬP, mỗi người một file:
+# data/eval/labels/<tên>.yaml. Không xem file của người kia trước khi gán xong.
+annotator: "<Họ và tên>"
+labels:
+  - case_id: C01
+    # id giả thuyết `reviewed` cùng loại với ca (xem hypotheses/library_draft.yaml) hoặc `other`
+    reference_set: [<id_giả_thuyết>]
+    # tùy chọn: trạng thái chuẩn của từng giả thuyết (SUPPORTED | PARTIAL | CONTRADICTED | UNVERIFIED),
+    # dùng cho verification accuracy (spec 15.3) trên top-3 của cấu hình C ở tập test
+    statuses: {}
+    # nguồn ĐỘC LẬP với kho RAG (không dùng BCTC hợp nhất đã nạp vào RAG):
+    # báo cáo thường niên/BCTC năm sau, báo cáo phân tích, tin tức, giải trình của công ty...
+    sources:
+      - title: "<tên nguồn>"
+        date: "<yyyy-mm-dd>"
+        url: "<link>"            # hoặc doc_id: "<mã tài liệu>"
+        page: ""                 # tùy chọn
+    note: ""                     # BẮT BUỘC mô tả giả thuyết nếu có `other`

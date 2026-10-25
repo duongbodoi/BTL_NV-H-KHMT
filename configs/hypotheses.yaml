@@ -11,7 +11,7 @@ min_reviewed_per_type: 6
 # `tokens`: phải trùng nguyên một từ của tên.
 non_human_reviewer_words: [claude, anthropic, gpt, chatgpt, openai, gemini, llm, sonnet, opus, haiku, llama, grok, mistral, copilot, assistant, chatbot]
 non_human_reviewer_tokens: [ai, bot, ml]
-placeholder_reviewers: [tbd, n/a, na, none, unknown, nhóm, team, chưa có]
+placeholder_reviewers: [tbd, n/a, na, none, unknown, nhóm, team, chưa có, họ tên, họ và tên]
 
 # Mỗi mục trong `sources` (khi reviewed) tối thiểu bấy nhiêu ký tự, tránh "x" hoặc "n/a".
 min_source_chars: 8

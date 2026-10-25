@@ -139,7 +139,7 @@ def load_library_settings(
     if cat_path.is_file():
         body = cat_path.read_text(encoding="utf-8")
         catalog_codes = frozenset(
-            m.group(0) for m in re.finditer(r"" + pat.strip("^$") + r"", body)
+            m.group(0) for m in re.finditer(r"\b" + pat.strip("^$") + r"\b", body)
         )
     comps = dataset_cfg.get("companies")
     if not isinstance(comps, list) or not all(isinstance(c, str) for c in comps):
@@ -224,8 +224,8 @@ def _validate_check(c: Any, where: str, settings: LibrarySettings) -> list[str]:
 
 def _reviewer_problem(name: str, settings: LibrarySettings) -> str | None:
     """Lọc theo danh sách chỉ chặn phần lớn trường hợp; người ký/commit vẫn là kiểm soát cuối."""
-    if name.strip().lower() in settings.placeholder_reviewers:
-        return "là giá trị giữ chỗ"
+    if name.strip().lower() in settings.placeholder_reviewers or any(c in name for c in "<>[]{}"):
+        return "là giá trị giữ chỗ"  # kể cả chép nguyên mẫu "<Họ và tên>"
     norm = unicodedata.normalize("NFKC", name)
     for ch in norm:
         if ch.isalpha() and unicodedata.name(ch, "").split(" ")[0] in ("CYRILLIC", "GREEK"):
@@ -239,6 +239,13 @@ def _reviewer_problem(name: str, settings: LibrarySettings) -> str | None:
     if set(words) & settings.non_human_reviewer_tokens:
         return "trông như tên mô hình/công cụ AI"
     return None
+
+
+def person_name_problem(name: Any, settings: LibrarySettings) -> str | None:
+    """Cùng luật với `reviewed_by`: dùng cho người gán nhãn/giải quyết bất đồng (Phase 12a)."""
+    if not _is_text(name):
+        return "phải là họ tên người (chuỗi không rỗng)"
+    return _reviewer_problem(name, settings)
 
 
 def _mentions_company(raw: dict[str, Any], settings: LibrarySettings) -> str | None:

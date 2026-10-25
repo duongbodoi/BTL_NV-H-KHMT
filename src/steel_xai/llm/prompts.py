@@ -142,6 +142,12 @@ def prompt_fingerprint() -> str:
             "classify_system": CLASSIFY_SYSTEM,
             "rephrase_schema": REPHRASE_SCHEMA,
             "classify_schema": CLASSIFY_SCHEMA,
+            # phần user prompt (khung câu, hướng dẫn) với đầu vào mẫu cố định: đổi câu chữ → đổi hash
+            "rephrase_user": rephrase_user("{claim}", "{type}", "{dir}", [{"id": "{check}"}]),
+            "classify_user": {
+                w: classify_user("{claim}", w, [{"chunk_id": "c", "page": 1, "text": "{text}"}])
+                for w in sorted(_WANTED)
+            },
         },
         ensure_ascii=False,
         sort_keys=True,
